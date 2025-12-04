@@ -2,44 +2,26 @@
 
 from __future__ import annotations
 
-import json
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
+from app_config import get_google_calendar_settings
+
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
-
-
-class MissingCredentialsError(RuntimeError):
-    """Raised when Google service-account credentials are missing."""
-
-
-def _load_service_account_info() -> dict[str, Any]:
-    raw_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-    json_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
-
-    if raw_json:
-        return json.loads(raw_json)
-
-    if json_path:
-        with open(json_path, "r", encoding="utf-8") as handle:
-            return json.load(handle)
-
-    raise MissingCredentialsError(
-        "Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_FILE with the service account credentials."
-    )
 
 
 def get_calendar_service():
     """Build and return an authenticated Calendar API client."""
-    info = _load_service_account_info()
-    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
-    delegated_user = os.getenv("GOOGLE_CALENDAR_DELEGATE")
-    if delegated_user:
-        creds = creds.with_subject(delegated_user)
+    settings = get_google_calendar_settings()
+    creds = Credentials.from_service_account_info(
+        settings.service_account_info,
+        scopes=SCOPES,
+    )
+    if settings.delegate:
+        creds = creds.with_subject(settings.delegate)
     return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
 

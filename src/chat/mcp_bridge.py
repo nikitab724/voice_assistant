@@ -7,8 +7,9 @@ import json
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TYPE_CHECKING
 
 from fastmcp import Client as FastMCPClient
-from fastmcp.types import Tool as FastMCPTool
+from mcp.types import Tool as MCPTool
 
+from app_config import get_async_openai_client, get_openai_settings
 from workflow_server import server as calendar_mcp_server
 
 if TYPE_CHECKING:
@@ -17,7 +18,7 @@ else:  # pragma: no cover
     AsyncOpenAI = Any  # type: ignore[assignment]
 
 
-def _tool_tags(tool: FastMCPTool) -> Set[str]:
+def _tool_tags(tool: MCPTool) -> Set[str]:
     meta = getattr(tool, "meta", {}) or {}
     fastmcp_meta = meta.get("_fastmcp", {}) or {}
     tags = fastmcp_meta.get("tags") or []
@@ -30,15 +31,15 @@ def _tool_tags(tool: FastMCPTool) -> Set[str]:
 
 
 def filter_tools(
-    tools: Sequence[FastMCPTool],
+    tools: Sequence[MCPTool],
     *,
     allowed_names: Optional[Sequence[str]] = None,
     required_tags: Optional[Iterable[str]] = None,
-) -> List[FastMCPTool]:
+) -> List[MCPTool]:
     names = set(allowed_names or [])
     tag_set = set(required_tags or [])
 
-    filtered: List[FastMCPTool] = []
+    filtered: List[MCPTool] = []
     for tool in tools:
         if names and tool.name not in names:
             continue
@@ -49,7 +50,7 @@ def filter_tools(
     return filtered
 
 
-def format_tools_for_openai(tools: Sequence[FastMCPTool]) -> List[Dict[str, Any]]:
+def format_tools_for_openai(tools: Sequence[MCPTool]) -> List[Dict[str, Any]]:
     formatted: List[Dict[str, Any]] = []
     for tool in tools:
         formatted.append(
@@ -74,7 +75,7 @@ async def list_mcp_tools(
     *,
     allowed_names: Optional[Sequence[str]] = None,
     required_tags: Optional[Iterable[str]] = None,
-) -> List[FastMCPTool]:
+) -> List[MCPTool]:
     async with FastMCPClient(calendar_mcp_server) as client:
         tools = await client.list_tools()
     return filter_tools(tools, allowed_names=allowed_names, required_tags=required_tags)
@@ -117,20 +118,13 @@ async def run_chat_with_mcp_tools(
     openai_client: Optional[AsyncOpenAI] = None,
 ) -> Dict[str, Any]:
     """Single round-trip with the LLM, letting it call MCP tools if needed."""
-    try:
-        from openai import AsyncOpenAI
-    except ImportError as exc:  # pragma: no cover - optional dependency
-        raise RuntimeError(
-            "Install the openai package or provide an AsyncOpenAI instance."
-        ) from exc
-
     convo: List[Dict[str, Any]] = []
     if context_prefix:
         convo.extend(context_prefix)
     convo.extend(messages)
 
-    llm = openai_client or AsyncOpenAI()
-    model_name = model or "gpt-4o-mini"
+    llm = openai_client or get_async_openai_client()
+    model_name = model or get_openai_settings().default_model
 
     async with FastMCPClient(calendar_mcp_server) as client:
         tools = filter_tools(

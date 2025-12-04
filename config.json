@@ -1,0 +1,11 @@
+{
+    "openai": {
+        "model": "gpt-5.1",
+        "api_key_name": "OPENAI_API_KEY"
+    },
+    "google": {
+        "service_account_file": "service-account.json",
+        "calendar_id": "primary",
+        "delegate": "user@example.com"
+    }
+}

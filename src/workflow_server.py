@@ -7,11 +7,8 @@ from typing import Annotated
 
 from fastmcp import Context, FastMCP
 
-from calendar_client import (
-    MissingCredentialsError,
-    create_event_payload,
-    get_calendar_service,
-)
+from calendar_client import create_event_payload, get_calendar_service
+from app_config import MissingCredentialsError, get_google_calendar_settings
 
 
 server = FastMCP(
@@ -50,7 +47,14 @@ async def create_google_calendar_event(
     if not start_iso:
         raise ValueError("start_iso is required")
 
-    calendar_id = calendar_id or os.getenv("GOOGLE_CALENDAR_ID", "primary")
+    try:
+        calendar_settings = get_google_calendar_settings()
+    except MissingCredentialsError as exc:
+        if context:
+            await context.error(str(exc))
+        raise
+
+    calendar_id = calendar_id or calendar_settings.calendar_id
 
     if context:
         await context.info(f"Creating event '{summary}' on calendar '{calendar_id}'.")
@@ -63,12 +67,7 @@ async def create_google_calendar_event(
         timezone_name=timezone_name,
     )
 
-    try:
-        service = get_calendar_service()
-    except MissingCredentialsError as exc:
-        if context:
-            await context.error(str(exc))
-        raise
+    service = get_calendar_service()
 
     created = (
         service.events()
