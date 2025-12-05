@@ -1,0 +1,8 @@
+.env
+*.pyc
+*/__pycache__/
+media/
+ai-cookbook/
+oauth-token.json
+*.apps.googleusercontent.com.json
+.venv/
