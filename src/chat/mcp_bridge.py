@@ -22,17 +22,7 @@ else:  # pragma: no cover
     AsyncOpenAI = Any  # type: ignore[assignment]
 
 _openai_client: AsyncOpenAI | None = None
-_client: FastMCPClient | None = None
 _DEBUG_ENABLED = os.getenv("MCP_BRIDGE_DEBUG") == "1"
-
-
-async def _get_client() -> FastMCPClient:
-    """Return a single shared FastMCP client instance."""
-    global _client
-    if _client is None:
-        _client = FastMCPClient(calendar_mcp_server)
-        await _client.__aenter__()
-    return _client
 
 
 def _debug_log(label: str, payload: Any) -> None:
@@ -158,78 +148,78 @@ async def run_chat_with_mcp_tools(
         _openai_client = llm
     model_name = model or get_openai_settings().default_model
 
-    client = await _get_client()
-    tools_result = await client.list_tools()
-    tools = _filter_tools(
-        tools_result,
-        allowed_names=allowed_names,
-        required_tags=required_tags,
-    )
-    openai_tools = _format_tools_for_openai(tools)
+    async with FastMCPClient(calendar_mcp_server) as client:
+        tools_result = await client.list_tools()
+        tools = _filter_tools(
+            tools_result,
+            allowed_names=allowed_names,
+            required_tags=required_tags,
+        )
+        openai_tools = _format_tools_for_openai(tools)
 
-    _debug_log("conversation.before_first_call", conversation)
+        _debug_log("conversation.before_first_call", conversation)
 
-    response = await llm.chat.completions.create(
-        model=model_name,
-        messages=conversation,
-        tools=openai_tools or None,
-        tool_choice="auto" if openai_tools else "none",
-    )
-    assistant_msg = response.choices[0].message
-    conversation.append(
-        {
-            "role": assistant_msg.role,
-            "content": assistant_msg.content,
-            "tool_calls": getattr(assistant_msg, "tool_calls", None),
-        }
-    )
-
-    tool_summaries: List[Dict[str, Any]] = []
-
-    if assistant_msg.tool_calls:
-        for call in assistant_msg.tool_calls:
-            args: Dict[str, Any] = {}
-            if getattr(call.function, "arguments", None):
-                try:
-                    args = json.loads(call.function.arguments)
-                except json.JSONDecodeError:
-                    args = {}
-
-            result = await client.call_tool(call.function.name, arguments=args)
-            payload_text = _stringify_tool_result(result)
-            _debug_log(
-                f"tool.{call.function.name}.response",
-                {"args": args, "payload": payload_text},
-            )
-            conversation.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": payload_text,
-                }
-            )
-
-            tool_summaries.append(
-                {
-                    "name": call.function.name,
-                    "arguments": args,
-                    "response": payload_text,
-                }
-            )
-
-        _debug_log("conversation.before_followup", conversation)
-
-        follow_up = await llm.chat.completions.create(
+        response = await llm.chat.completions.create(
             model=model_name,
             messages=conversation,
             tools=openai_tools or None,
-            tool_choice="none",
+            tool_choice="auto" if openai_tools else "none",
         )
-        final_msg = follow_up.choices[0].message
-        if not final_msg.content:
-            final_msg.content = "No response from LLM."
-    else:
-        final_msg = assistant_msg
+        assistant_msg = response.choices[0].message
+        conversation.append(
+            {
+                "role": assistant_msg.role,
+                "content": assistant_msg.content,
+                "tool_calls": getattr(assistant_msg, "tool_calls", None),
+            }
+        )
+
+        tool_summaries: List[Dict[str, Any]] = []
+
+        if assistant_msg.tool_calls:
+            for call in assistant_msg.tool_calls:
+                args: Dict[str, Any] = {}
+                if getattr(call.function, "arguments", None):
+                    try:
+                        args = json.loads(call.function.arguments)
+                    except json.JSONDecodeError:
+                        args = {}
+
+                result = await client.call_tool(call.function.name, arguments=args)
+                payload_text = _stringify_tool_result(result)
+                _debug_log(
+                    f"tool.{call.function.name}.response",
+                    {"args": args, "payload": payload_text},
+                )
+                conversation.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": payload_text,
+                    }
+                )
+
+                tool_summaries.append(
+                    {
+                        "name": call.function.name,
+                        "arguments": args,
+                        "response": payload_text,
+                    }
+                )
+
+            _debug_log("conversation.before_followup", conversation)
+
+            follow_up = await llm.chat.completions.create(
+                model=model_name,
+                messages=conversation,
+                tools=openai_tools or None,
+                tool_choice="none",
+            )
+            final_msg = follow_up.choices[0].message
+            if not final_msg.content:
+                final_msg.content = "No response from LLM."
+        else:
+            final_msg = assistant_msg
 
     _debug_log("assistant.final_message", final_msg.content)
 
