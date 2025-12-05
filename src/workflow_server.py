@@ -1,21 +1,21 @@
-"""FastMCP server exposing a single tool that creates Google Calendar events."""
+"""FastMCP server exposing Google Calendar helper tools."""
 
 from __future__ import annotations
 
-import os
 from typing import Annotated
 
 from fastmcp import Context, FastMCP
 
-from calendar_client import create_event_payload, get_calendar_service
-from app_config import MissingCredentialsError, get_google_calendar_settings
+from workflows import (
+    create_google_calendar_event_tool,
+    list_google_calendar_events_tool,
+)
 
 
 server = FastMCP(
     name="voice-assistant-calendar",
     instructions=(
-        "Expose a single tool that books Google Calendar events so an LLM can schedule "
-        "meetings directly."
+        "Expose tools that let an LLM inspect the user's Google Calendar and create events."
     ),
 )
 
@@ -23,11 +23,10 @@ server = FastMCP(
 @server.tool(description="Create an event in Google Calendar using the configured credentials.")
 async def create_google_calendar_event(
     summary: Annotated[str, "Title that will show up in Google Calendar."],
-    description: Annotated[str, "Optional event description or agenda."] = "",
     start_iso: Annotated[
         str,
-        "Start time in ISO-8601 format (e.g. 2025-12-05T09:30:00-05:00).",
-    ] = "",
+        "Start time in ISO-8601 format (e.g. 2025-12-05T09:30:00-05:00)."
+    ],
     duration_minutes: Annotated[
         int,
         "How long the event should last. Defaults to 60 minutes.",
@@ -40,55 +39,52 @@ async def create_google_calendar_event(
         str | None,
         "Optional override for the event timezone (e.g. America/New_York).",
     ] = None,
+    description: Annotated[str, "Optional event description or agenda."] = "",
     context: Context | None = None,
-) -> dict[str, str | int | dict[str, object]]:
-    if not summary:
-        raise ValueError("summary is required")
-    if not start_iso:
-        raise ValueError("start_iso is required")
-
-    try:
-        calendar_settings = get_google_calendar_settings()
-    except MissingCredentialsError as exc:
-        if context:
-            await context.error(str(exc))
-        raise
-
-    calendar_id = calendar_id or calendar_settings.calendar_id
-
-    if context:
-        await context.info(f"Creating event '{summary}' on calendar '{calendar_id}'.")
-
-    event_payload = create_event_payload(
+):
+    return await create_google_calendar_event_tool(
         summary=summary,
         description=description,
         start_iso=start_iso,
         duration_minutes=duration_minutes,
+        calendar_id=calendar_id,
         timezone_name=timezone_name,
+        context=context,
     )
 
-    service = get_calendar_service()
 
-    created = (
-        service.events()
-        .insert(calendarId=calendar_id, body=event_payload, sendUpdates="all")
-        .execute()
+@server.tool(description="Retrieve upcoming events from Google Calendar.")
+async def list_google_calendar_events(
+    calendar_id: Annotated[
+        str | None,
+        "Calendar ID to read from. Defaults to GOOGLE_CALENDAR_ID env var or 'primary'.",
+    ] = None,
+    time_min_iso: Annotated[
+        str | None,
+        "ISO timestamp for the earliest event start to return. Defaults to now.",
+    ] = None,
+    time_max_iso: Annotated[
+        str | None,
+        "ISO timestamp for the latest event start to return. Defaults to 7 days after time_min.",
+    ] = None,
+    max_results: Annotated[
+        int,
+        "Maximum number of events to return (1-50). Defaults to 10.",
+    ] = 10,
+    include_cancelled: Annotated[
+        bool,
+        "Whether to include cancelled events in the response.",
+    ] = False,
+    context: Context | None = None,
+):
+    return await list_google_calendar_events_tool(
+        calendar_id=calendar_id,
+        time_min_iso=time_min_iso,
+        time_max_iso=time_max_iso,
+        max_results=max_results,
+        include_cancelled=include_cancelled,
+        context=context,
     )
-
-    if context:
-        html_link = created.get("htmlLink")
-        await context.info(
-            f"Google Calendar event created: {html_link or created.get('id')}"
-        )
-
-    return {
-        "id": created.get("id"),
-        "htmlLink": created.get("htmlLink"),
-        "calendarId": calendar_id,
-        "summary": created.get("summary"),
-        "status": created.get("status"),
-        "hangoutLink": created.get("hangoutLink"),
-    }
 
 
 if __name__ == "__main__":

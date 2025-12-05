@@ -3,9 +3,12 @@
         "model": "gpt-5.1",
         "api_key_name": "OPENAI_API_KEY"
     },
+    "agent": {
+        "instructions": "You are the user's voice assistant. Keep responses action-focused and concise, call MCP tools whenever they can help, and only mention the current date/time if the user explicitly asks."
+    },
     "google": {
-        "service_account_file": "service-account.json",
-        "calendar_id": "primary",
-        "delegate": "user@example.com"
+        "oauth_client_secret_file": "client_secret_428942258276-nf9o2kce2tf8dqn5a6kdmnp8dha68kv9.apps.googleusercontent.com.json",
+        "oauth_token_file": "oauth-token.json",
+        "calendar_id": "primary"
     }
 }
