@@ -90,6 +90,10 @@ class VoiceUI(tk.Tk):
                 self.recording = True
                 self.record_button.config(text="Stop Recording")
                 self.append_message("System", "Recording started...")
+                if self.recorder.last_device_info:
+                    self.append_message(
+                        "System", f"Input device: {self.recorder.last_device_info}"
+                    )
             except Exception as exc:
                 self.append_message("Error", str(exc))
         else:
@@ -98,6 +102,8 @@ class VoiceUI(tk.Tk):
                 self.recording = False
                 self.record_button.config(text="Record Voice")
                 self.append_message("System", f"Recording saved to {filename}, transcribing...")
+                if self.recorder.last_warning:
+                    self.append_message("System", f"Warning: {self.recorder.last_warning}")
                 threading.Thread(target=self._transcribe_and_send, args=(filename,), daemon=True).start()
             except Exception as exc:
                 self.append_message("Error", str(exc))
