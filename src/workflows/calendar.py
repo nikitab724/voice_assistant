@@ -3,12 +3,48 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel
 
 from fastmcp import Context
 
 from calendar_client import create_event_payload, get_calendar_service
 from app_config import MissingCredentialsError, get_google_calendar_settings
+
+
+class CalendarEvent(BaseModel):
+    id: Optional[str] = None
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    start: Optional[Dict[str, Any]] = None
+    end: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None
+    htmlLink: Optional[str] = None
+    hangoutLink: Optional[str] = None
+    location: Optional[str] = None
+    calendarId: Optional[str] = None
+
+
+class CreateEventResult(BaseModel):
+    status: Literal["success", "error"]
+    event: Optional[CalendarEvent] = None
+    message: Optional[str] = None
+
+
+class ListEventsResult(BaseModel):
+    status: Literal["success", "error"]
+    calendarId: str
+    timeMin: str
+    timeMax: str
+    events: List[CalendarEvent]
+    message: Optional[str] = None
+
+
+class DeleteEventResult(BaseModel):
+    status: Literal["success", "error"]
+    eventId: Optional[str] = None
+    message: Optional[str] = None
 
 
 async def create_google_calendar_event_tool(
@@ -59,16 +95,32 @@ async def create_google_calendar_event_tool(
             f"Google Calendar event created: {html_link or created.get('id')}"
         )
 
-    result = {
-        "id": created.get("id"),
-        "htmlLink": created.get("htmlLink"),
-        "calendarId": calendar_id,
-        "summary": created.get("summary"),
-        "status": created.get("status"),
-        "hangoutLink": created.get("hangoutLink"),
-    }
+    event = CalendarEvent(
+        id=created.get("id"),
+        summary=created.get("summary"),
+        description=created.get("description"),
+        start=created.get("start"),
+        end=created.get("end"),
+        status=created.get("status"),
+        htmlLink=created.get("htmlLink"),
+        hangoutLink=created.get("hangoutLink"),
+        location=created.get("location"),
+        calendarId=calendar_id,
+    )
 
-    return {k: v for k, v in result.items() if v is not None}
+    event_status = (created.get("status") or "").lower()
+    status_value = "success" if event_status in {"confirmed", "tentative"} else "error"
+    message = None
+    if status_value == "error":
+        message = f"Google Calendar returned status '{event_status or 'unknown'}' for the new event."
+
+    result = CreateEventResult(
+        status=status_value,
+        event=event,
+        message=message,
+    )
+
+    return result.model_dump()
 
 
 def _coerce_datetime(value: str) -> datetime:
@@ -125,28 +177,82 @@ async def list_google_calendar_events_tool(
     )
 
     items = events_result.get("items", [])
-    events = []
+    events: List[CalendarEvent] = []
     for item in items:
-        event_payload = {
-            "id": item.get("id"),
-            "summary": item.get("summary"),
-            "description": item.get("description"),
-            "start": item.get("start"),
-            "end": item.get("end"),
-            "status": item.get("status"),
-            "htmlLink": item.get("htmlLink"),
-            "hangoutLink": item.get("hangoutLink"),
-            "location": item.get("location"),
-        }
-        events.append({k: v for k, v in event_payload.items() if v is not None})
+        events.append(
+            CalendarEvent(
+                id=item.get("id"),
+                summary=item.get("summary"),
+                description=item.get("description"),
+                start=item.get("start"),
+                end=item.get("end"),
+                status=item.get("status"),
+                htmlLink=item.get("htmlLink"),
+                hangoutLink=item.get("hangoutLink"),
+                location=item.get("location"),
+                calendarId=calendar_id,
+            )
+        )
 
     if context:
         await context.info(f"Fetched {len(events)} events from calendar '{calendar_id}'.")
 
-    return {
-        "calendarId": calendar_id,
-        "timeMin": window_start.isoformat(),
-        "timeMax": window_end.isoformat(),
-        "events": events,
-    }
+    success_statuses = {"confirmed", "tentative"}
+    invalid_events = [
+        event.summary or event.id or "unknown event"
+        for event in events
+        if event.status and event.status.lower() not in success_statuses
+    ]
+    status_value = "success" if not invalid_events else "error"
+    message = None
+    if invalid_events:
+        message = "Some events returned unexpected statuses: " + ", ".join(invalid_events)
+
+    result = ListEventsResult(
+        status=status_value,
+        calendarId=calendar_id,
+        timeMin=window_start.isoformat(),
+        timeMax=window_end.isoformat(),
+        events=events,
+        message=message,
+    )
+    return result.model_dump()
+
+
+async def delete_google_calendar_event_tool(
+    event_id: str,
+    calendar_id: str | None = None,
+    context: Context | None = None,
+) -> dict[str, Any]:
+    if not event_id:
+        raise ValueError("event_id is required")
+
+    try:
+        calendar_settings = get_google_calendar_settings()
+    except MissingCredentialsError as exc:
+        if context:
+            await context.error(str(exc))
+        raise
+
+    calendar_id = calendar_id or calendar_settings.calendar_id
+
+    if context:
+        await context.info(f"Deleting event '{event_id}' from calendar '{calendar_id}'.")
+
+    service = get_calendar_service()
+
+    try:
+        service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+        status_value = "success"
+        message = None
+        if context:
+            await context.info("Event deleted successfully.")
+    except Exception as exc:  # pragma: no cover - Google API errors
+        status_value = "error"
+        message = f"Failed to delete event: {exc}"
+        if context:
+            await context.error(message)
+
+    result = DeleteEventResult(status=status_value, eventId=event_id, message=message)
+    return result.model_dump()
 

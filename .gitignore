@@ -6,3 +6,5 @@ ai-cookbook/
 oauth-token.json
 *.apps.googleusercontent.com.json
 .venv/
+certs/
+src/*/__pycache__/

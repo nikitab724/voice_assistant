@@ -19,7 +19,8 @@ from voice_transcription import Recorder, transcribe_file
 MEDIA_DIR = os.path.join(ROOT_DIR, "media")
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
-CHAT_ENDPOINT = "http://localhost:5050/api/chat"
+CHAT_SERVER_URL = os.environ.get("CHAT_SERVER_URL", "http://localhost:5050").rstrip("/")
+CHAT_ENDPOINT = f"{CHAT_SERVER_URL}/api/chat"
 SESSION_ID = "voice-ui"
 
 

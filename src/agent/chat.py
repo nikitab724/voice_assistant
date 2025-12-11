@@ -26,17 +26,29 @@ class ChatAgent:
         session_store.append_turn(session, "user", user_message)
         session_store.trim_history(session)
 
+        session_messages = [turn.to_message() for turn in session.turns]
+        historical_count = len(session_messages)
+        context_len = len(self.context_prefix or [])
+
         result = await run_chat_with_mcp_tools(
-            messages=[{"role": t.role, "content": t.content} for t in session.turns],
+            messages=session_messages,
             context_prefix=self.context_prefix,
         )
 
         assistant_msg = result["assistant_message"]
-        session_store.append_turn(
-            session,
-            assistant_msg.role or "assistant",
-            assistant_msg.content or "",
-        )
+
+        conversation = result.get("conversation") or []
+        new_messages_start = 1 + context_len + historical_count
+        for message in conversation[new_messages_start:]:
+            if message.get("role") == "system":
+                continue
+            session_store.append_turn(
+                session,
+                message.get("role", "assistant"),
+                message.get("content"),
+                tool_call_id=message.get("tool_call_id"),
+                tool_calls=message.get("tool_calls"),
+            )
         session_store.trim_history(session)
 
         return {

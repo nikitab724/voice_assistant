@@ -16,13 +16,17 @@ if str(SRC_DIR) not in sys.path:
 from voice_transcription import transcribe_file
 
 
+CHAT_SERVER_URL = os.environ.get("CHAT_SERVER_URL", "http://localhost:5050").rstrip("/")
+CHAT_ENDPOINT = f"{CHAT_SERVER_URL}/api/chat"
+
+
 def transcribe_with_whisper(media_path: str) -> str:
     return transcribe_file(media_path)
 
 
 def send_message(message: str, session_id: str = "voice") -> dict:
     resp = requests.post(
-        "http://localhost:5050/api/chat",
+        CHAT_ENDPOINT,
         json={"session_id": session_id, "message": message},
         timeout=60,
     )

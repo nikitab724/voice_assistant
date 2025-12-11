@@ -70,4 +70,68 @@ Once the server is running (`python src/workflow_server.py`), the following tool
 
 - `create_google_calendar_event`: Book an event on the configured calendar.
 - `list_google_calendar_events`: Read upcoming events within a time window (defaults to the next seven days).
+- `delete_google_calendar_event`: Remove an event by ID from the configured calendar.
+
+## Chat HTTP server (Flask + Uvicorn)
+
+The `POST /api/chat` endpoint (plus `GET /health`) now run behind Uvicorn so the iOS client can talk to the Mac from the local network or via a tunnel:
+
+1. Install the ASGI server once in your virtualenv:
+   ```bash
+   pip install "uvicorn[standard]"
+   ```
+2. During development you can keep using the script directly—it now boots Uvicorn automatically:
+   ```bash
+   python scripts/flask_server.py
+   ```
+3. For a long-running process (or when deploying), start it explicitly so you can choose host/port:
+   ```bash
+   uvicorn scripts.flask_server:asgi_app --host 0.0.0.0 --port 5050
+   ```
+   Replace `0.0.0.0` with the machine’s LAN IP (or the hostname provided by ngrok/cloudflared) before pointing the Swift app at it.
+
+### Server environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CHAT_SERVER_HOST` | `0.0.0.0` | Address Uvicorn binds to. Use `127.0.0.1` if you want to keep it local-only. |
+| `CHAT_SERVER_PORT` | `5050` | TCP port for the HTTP API. |
+| `CHAT_SERVER_LOG_LEVEL` | `info` | Uvicorn log verbosity (`info`, `debug`, etc.). |
+| `CHAT_SERVER_URL` | `http://localhost:5050` | Base URL consumed by helper scripts (`voice_ui.py`, `transcribe_and_chat.py`). Set it to `http://<mac-ip>:5050` or `https://…` when exposing the service. |
+| `CHAT_SERVER_CERT_FILE` | ⛔️ (unset) | Absolute path to a PEM certificate. When set together with `CHAT_SERVER_KEY_FILE`, HTTPS is enabled automatically. |
+| `CHAT_SERVER_KEY_FILE` | ⛔️ (unset) | Private key that matches the certificate above. |
+| `CHAT_SERVER_KEY_PASSWORD` | ⛔️ | Optional password for the private key. |
+
+When targeting an iOS simulator/device on the same Wi‑Fi network, bind to `0.0.0.0`, find your Mac’s LAN IP via `ipconfig getifaddr en0`, and point the Swift client at `http://<that-ip>:5050/api/chat`. Use a tunneling service if you need it reachable over the public internet.
+
+### Enabling HTTPS (macOS + iOS dev workflow)
+
+1. **Generate a certificate.** The easiest local-dev setup is [`mkcert`](https://github.com/FiloSottile/mkcert):
+   ```bash
+   brew install mkcert nss # installs mkcert + CA toolchain
+   mkcert -install         # adds the local CA to macOS trust store
+   mkdir -p certs
+   mkcert -cert-file certs/chat.pem -key-file certs/chat-key.pem \
+          localhost $(hostname) 127.0.0.1 ::1
+   ```
+   If you need to reach the Mac from an iPhone/iPad, install the same mkcert root CA on the device (AirDrop the file printed by `mkcert -CAROOT` and trust it under Settings ▸ General ▸ About ▸ Certificate Trust Settings).
+2. **Export the env vars before launching the server:**
+   ```bash
+   export CHAT_SERVER_CERT_FILE="$PWD/certs/chat.pem"
+   export CHAT_SERVER_KEY_FILE="$PWD/certs/chat-key.pem"
+   export CHAT_SERVER_URL="https://<mac-ip>:5050"
+   export REQUESTS_CA_BUNDLE="$(mkcert -CAROOT)/rootCA.pem"  # so local Python clients trust it
+   ```
+3. **Start the server** (now serving HTTPS):
+   ```bash
+   python scripts/flask_server.py
+   # or
+   uvicorn scripts.flask_server:asgi_app --host 0.0.0.0 --port 5050 \
+       --ssl-certfile "$CHAT_SERVER_CERT_FILE" --ssl-keyfile "$CHAT_SERVER_KEY_FILE"
+   ```
+4. **Update clients:**
+   - Swift app: point to `https://<mac-ip>:5050/api/chat`.
+   - Python helpers (`voice_ui.py`, `transcribe_and_chat.py`): set `CHAT_SERVER_URL` to the same HTTPS URL. If you used mkcert, keep `REQUESTS_CA_BUNDLE` exported so `requests` validates the cert. (Avoid disabling TLS verification; iOS ATS requires trusted certificates.)
+
+For production-grade deployments, swap the mkcert pair with a publicly trusted certificate (e.g., LetsEncrypt) and leave the env vars pointing at those PEM files.
 

@@ -9,13 +9,14 @@ from fastmcp import Context, FastMCP
 from workflows import (
     create_google_calendar_event_tool,
     list_google_calendar_events_tool,
+    delete_google_calendar_event_tool,
 )
 
 
 server = FastMCP(
     name="voice-assistant-calendar",
     instructions=(
-        "Expose tools that let an LLM inspect the user's Google Calendar and create events."
+        "Expose tools that let an LLM inspect the user's Google Calendar, create events, and delete events when asked."
     ),
 )
 
@@ -83,6 +84,22 @@ async def list_google_calendar_events(
         time_max_iso=time_max_iso,
         max_results=max_results,
         include_cancelled=include_cancelled,
+        context=context,
+    )
+
+
+@server.tool(description="Delete an event from Google Calendar by ID.")
+async def delete_google_calendar_event(
+    event_id: Annotated[str, "The identifier of the event to delete."],
+    calendar_id: Annotated[
+        str | None,
+        "Calendar ID to delete from. Defaults to GOOGLE_CALENDAR_ID env var or 'primary'.",
+    ] = None,
+    context: Context | None = None,
+):
+    return await delete_google_calendar_event_tool(
+        event_id=event_id,
+        calendar_id=calendar_id,
         context=context,
     )
 

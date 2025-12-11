@@ -35,6 +35,34 @@ def _debug_log(label: str, payload: Any) -> None:
     print(f"[mcp_bridge][debug] {label}:\n{serialized}\n")
 
 
+def _print_conversation(label: str, conversation: Sequence[Dict[str, Any]]) -> None:
+    """Always print the conversation payload sent to the LLM for quick debugging."""
+    try:
+        serialized = json.dumps(conversation, indent=2, ensure_ascii=False, default=str)
+    except TypeError:
+        serialized = str(conversation)
+    print(f"[mcp_bridge] {label}:\n{serialized}\n")
+
+
+def _serialize_tool_calls(tool_calls: Optional[Sequence[Any]]) -> Optional[List[Dict[str, Any]]]:
+    if not tool_calls:
+        return None
+    serialized: List[Dict[str, Any]] = []
+    for call in tool_calls:
+        function = getattr(call, "function", None)
+        serialized.append(
+            {
+                "id": getattr(call, "id", None),
+                "type": getattr(call, "type", None),
+                "function": {
+                    "name": getattr(function, "name", None) if function else None,
+                    "arguments": getattr(function, "arguments", None) if function else None,
+                },
+            }
+        )
+    return serialized
+
+
 def _tool_tags(tool: MCPTool) -> Set[str]:
     meta = getattr(tool, "meta", {}) or {}
     fastmcp_meta = meta.get("_fastmcp", {}) or {}
@@ -156,27 +184,44 @@ async def run_chat_with_mcp_tools(
             required_tags=required_tags,
         )
         openai_tools = _format_tools_for_openai(tools)
+        print("[mcp_bridge] Available tools for this request:")
+        for tool in openai_tools or []:
+            print(f"  - {tool['function']['name']}: {tool['function']['description']}")
+            print(f"    params: {tool['function']['parameters']}")
 
         _debug_log("conversation.before_first_call", conversation)
-
-        response = await llm.chat.completions.create(
-            model=model_name,
-            messages=conversation,
-            tools=openai_tools or None,
-            tool_choice="auto" if openai_tools else "none",
-        )
-        assistant_msg = response.choices[0].message
-        conversation.append(
-            {
-                "role": assistant_msg.role,
-                "content": assistant_msg.content,
-                "tool_calls": getattr(assistant_msg, "tool_calls", None),
-            }
-        )
+        _print_conversation("conversation.before_first_call", conversation)
 
         tool_summaries: List[Dict[str, Any]] = []
 
-        if assistant_msg.tool_calls:
+        max_tool_loops = 15
+        loop_count = 0
+        final_msg = None
+
+        while True:
+            response = await llm.chat.completions.create(
+                model=model_name,
+                messages=conversation,
+                tools=openai_tools or None,
+                tool_choice="auto" if openai_tools else "none",
+            )
+            assistant_msg = response.choices[0].message
+            serialized_tool_calls = _serialize_tool_calls(
+                getattr(assistant_msg, "tool_calls", None)
+            )
+            assistant_entry: Dict[str, Any] = {
+                "role": assistant_msg.role,
+                "content": assistant_msg.content,
+            }
+            if serialized_tool_calls:
+                assistant_entry["tool_calls"] = serialized_tool_calls
+            conversation.append(assistant_entry)
+
+            if not assistant_msg.tool_calls:
+                final_msg = assistant_msg
+                break
+
+            tool_success = False
             for call in assistant_msg.tool_calls:
                 args: Dict[str, Any] = {}
                 if getattr(call.function, "arguments", None):
@@ -207,19 +252,39 @@ async def run_chat_with_mcp_tools(
                     }
                 )
 
-            _debug_log("conversation.before_followup", conversation)
+                try:
+                    parsed = json.loads(payload_text) if payload_text else {}
+                except json.JSONDecodeError:
+                    parsed = {}
+                status_value = str(parsed.get("status") or "").lower()
+                if status_value == "success":
+                    tool_success = True
 
-            follow_up = await llm.chat.completions.create(
-                model=model_name,
-                messages=conversation,
-                tools=openai_tools or None,
-                tool_choice="none",
-            )
-            final_msg = follow_up.choices[0].message
-            if not final_msg.content:
-                final_msg.content = "No response from LLM."
-        else:
-            final_msg = assistant_msg
+            if tool_success:
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": "The tool call succeeded. Use its structured data to answer directly and do not say you lack access.",
+                    }
+                )
+            else:
+                conversation.append(
+                    {
+                        "role": "system",
+                        "content": "The tool call failed or returned an error. Explain the issue using the tool output and offer next steps.",
+                    }
+                )
+
+            _debug_log("conversation.before_followup", conversation)
+            _print_conversation("conversation.before_followup", conversation)
+
+            loop_count += 1
+            if loop_count >= max_tool_loops:
+                final_msg = SimpleNamespace(
+                    role="assistant",
+                    content="I reached the tool-call limit while trying to finish this request. Please try again or adjust the instructions.",
+                )
+                break
 
     _debug_log("assistant.final_message", final_msg.content)
 
