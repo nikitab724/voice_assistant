@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import local
 from typing import Any, Dict, Optional
 
 import google.auth.transport.requests
@@ -16,18 +16,19 @@ from app_config import MissingCredentialsError, get_google_calendar_settings
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
-# Context variable to store per-request Google access token
-_current_google_token: ContextVar[Optional[str]] = ContextVar("google_access_token", default=None)
+# Thread-local storage for per-request Google access token
+# (ContextVar doesn't work across asyncio.run() boundary in Python < 3.11)
+_thread_local = local()
 
 
 def set_google_access_token(token: Optional[str]) -> None:
     """Set the Google access token for the current request context."""
-    _current_google_token.set(token)
+    _thread_local.google_token = token
 
 
 def get_google_access_token() -> Optional[str]:
     """Get the Google access token for the current request context."""
-    return _current_google_token.get()
+    return getattr(_thread_local, "google_token", None)
 
 
 def get_calendar_service():

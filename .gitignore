@@ -10,3 +10,6 @@ certs/
 src/*/__pycache__/
 .DS_Store
 ios/GoogleService-Info.plist
+ios/VoiceAssistantWidget/
+ios/voice-assistant-Info.plist
+*.xcuserstate
