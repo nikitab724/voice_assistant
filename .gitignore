@@ -8,3 +8,5 @@ oauth-token.json
 .venv/
 certs/
 src/*/__pycache__/
+.DS_Store
+ios/GoogleService-Info.plist

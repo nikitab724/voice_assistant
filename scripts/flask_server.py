@@ -19,6 +19,7 @@ if SRC_DIR not in sys.path:
 
 from agent import ChatAgent  # noqa: E402
 from app_config import get_openai_settings  # noqa: E402
+from calendar_client import set_google_access_token  # noqa: E402
 
 app = Flask(__name__)
 chat_agent = ChatAgent()
@@ -30,7 +31,7 @@ def _get_openai_client() -> OpenAI:
     return OpenAI(api_key=settings.api_key)
 
 
-def _text_to_speech(text: str, voice: str = "alloy") -> bytes:
+def _text_to_speech(text: str, voice: str = "nova", speed: float = 1.1) -> bytes:
     """Convert text to speech using OpenAI TTS and return raw audio bytes."""
     client = _get_openai_client()
     response = client.audio.speech.create(
@@ -38,6 +39,7 @@ def _text_to_speech(text: str, voice: str = "alloy") -> bytes:
         voice=voice,
         input=text,
         response_format="mp3",
+        speed=speed,
     )
     return response.content
 
@@ -57,6 +59,15 @@ def _run_agent_response(payload: Dict[str, Any]):
     if not message:
         raise ValueError("message is required")
     user_id = payload.get("user_id")
+    
+    # Set Google access token if provided (from iOS app)
+    google_token = payload.get("google_access_token")
+    if google_token:
+        set_google_access_token(google_token)
+        app.logger.info("Using provided Google access token for user %s", user_id)
+    else:
+        set_google_access_token(None)  # Clear any previous token
+    
     return asyncio.run(
         chat_agent.respond(
             session_id=session_id,
@@ -80,7 +91,7 @@ def chat_endpoint():
 
         # Generate TTS audio if there's text to speak
         if text.strip():
-            voice = payload.get("voice", "alloy")
+            voice = payload.get("voice", "nova")
             audio_bytes = _text_to_speech(text, voice=voice)
             response_data["audio"] = base64.b64encode(audio_bytes).decode("utf-8")
             response_data["audio_format"] = "mp3"

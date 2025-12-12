@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import google.auth.transport.requests
 from google.oauth2.credentials import Credentials as OAuthCredentials
@@ -15,9 +16,33 @@ from app_config import MissingCredentialsError, get_google_calendar_settings
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
+# Context variable to store per-request Google access token
+_current_google_token: ContextVar[Optional[str]] = ContextVar("google_access_token", default=None)
+
+
+def set_google_access_token(token: Optional[str]) -> None:
+    """Set the Google access token for the current request context."""
+    _current_google_token.set(token)
+
+
+def get_google_access_token() -> Optional[str]:
+    """Get the Google access token for the current request context."""
+    return _current_google_token.get()
+
 
 def get_calendar_service():
-    """Build and return an authenticated Calendar API client."""
+    """Build and return an authenticated Calendar API client.
+    
+    If a Google access token was set via set_google_access_token(), uses that.
+    Otherwise falls back to service account or local OAuth token file.
+    """
+    # Check for per-request access token first (from iOS app)
+    access_token = get_google_access_token()
+    if access_token:
+        creds = OAuthCredentials(token=access_token)
+        return build("calendar", "v3", credentials=creds, cache_discovery=False)
+    
+    # Fall back to configured credentials (local dev)
     settings = get_google_calendar_settings()
 
     if settings.service_account_info:

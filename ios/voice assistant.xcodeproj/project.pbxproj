@@ -1,0 +1,733 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		115BDD9D2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 115BDD9C2EEBD40A00CA907D /* GoogleService-Info.plist */; };
+		115BDD9E2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 115BDD9C2EEBD40A00CA907D /* GoogleService-Info.plist */; };
+		115BDD9F2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 115BDD9C2EEBD40A00CA907D /* GoogleService-Info.plist */; };
+		115BDDA82EEBDF5900CA907D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDA72EEBDF5900CA907D /* FirebaseAuth */; };
+		115BDDAA2EEBDF5900CA907D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDA92EEBDF5900CA907D /* FirebaseCore */; };
+		115BDDAC2EEBDF5900CA907D /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDAB2EEBDF5900CA907D /* FirebaseDatabase */; };
+		115BDDAE2EEBDF5900CA907D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDAD2EEBDF5900CA907D /* FirebaseFirestore */; };
+		115BDDB02EEBDF5900CA907D /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDAF2EEBDF5900CA907D /* FirebaseFirestoreCombine-Community */; };
+		115BDDB32EEBDFC100CA907D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDB22EEBDFC100CA907D /* GoogleSignIn */; };
+		115BDDB52EEBDFC100CA907D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 115BDDB42EEBDFC100CA907D /* GoogleSignInSwift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		116DE0682EE505F600AEADAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 116DE0502EE505F500AEADAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 116DE0572EE505F500AEADAA;
+			remoteInfo = "voice assistant";
+		};
+		116DE0722EE505F600AEADAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 116DE0502EE505F500AEADAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 116DE0572EE505F500AEADAA;
+			remoteInfo = "voice assistant";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		115BDD3C2EEA975E00CA907D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		115BDD292EEA975D00CA907D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		115BDD2B2EEA975D00CA907D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		115BDD9C2EEBD40A00CA907D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		116DE0582EE505F500AEADAA /* voice assistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "voice assistant.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		116DE0672EE505F600AEADAA /* voice assistantTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "voice assistantTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		116DE0712EE505F600AEADAA /* voice assistantUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "voice assistantUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		115BDDA62EEBDE8800CA907D /* Exceptions for "voice assistant" folder in "voice assistant" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"voice-assistant-Info.plist",
+			);
+			target = 116DE0572EE505F500AEADAA /* voice assistant */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		115BDD2D2EEA975D00CA907D /* VoiceAssistantWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = VoiceAssistantWidget;
+			sourceTree = "<group>";
+		};
+		116DE05A2EE505F500AEADAA /* voice assistant */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				115BDDA62EEBDE8800CA907D /* Exceptions for "voice assistant" folder in "voice assistant" target */,
+			);
+			path = "voice assistant";
+			sourceTree = "<group>";
+		};
+		116DE06A2EE505F600AEADAA /* voice assistantTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "voice assistantTests";
+			sourceTree = "<group>";
+		};
+		116DE0742EE505F600AEADAA /* voice assistantUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "voice assistantUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		116DE0552EE505F500AEADAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				115BDDAC2EEBDF5900CA907D /* FirebaseDatabase in Frameworks */,
+				115BDDAE2EEBDF5900CA907D /* FirebaseFirestore in Frameworks */,
+				115BDDB52EEBDFC100CA907D /* GoogleSignInSwift in Frameworks */,
+				115BDDAA2EEBDF5900CA907D /* FirebaseCore in Frameworks */,
+				115BDDB02EEBDF5900CA907D /* FirebaseFirestoreCombine-Community in Frameworks */,
+				115BDDA82EEBDF5900CA907D /* FirebaseAuth in Frameworks */,
+				115BDDB32EEBDFC100CA907D /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE0642EE505F600AEADAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE06E2EE505F600AEADAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		115BDD282EEA975D00CA907D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				115BDD9C2EEBD40A00CA907D /* GoogleService-Info.plist */,
+				115BDD292EEA975D00CA907D /* WidgetKit.framework */,
+				115BDD2B2EEA975D00CA907D /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		116DE04F2EE505F500AEADAA = {
+			isa = PBXGroup;
+			children = (
+				116DE05A2EE505F500AEADAA /* voice assistant */,
+				116DE06A2EE505F600AEADAA /* voice assistantTests */,
+				116DE0742EE505F600AEADAA /* voice assistantUITests */,
+				115BDD2D2EEA975D00CA907D /* VoiceAssistantWidget */,
+				115BDD282EEA975D00CA907D /* Frameworks */,
+				116DE0592EE505F500AEADAA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		116DE0592EE505F500AEADAA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				116DE0582EE505F500AEADAA /* voice assistant.app */,
+				116DE0672EE505F600AEADAA /* voice assistantTests.xctest */,
+				116DE0712EE505F600AEADAA /* voice assistantUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		116DE0572EE505F500AEADAA /* voice assistant */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 116DE07B2EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistant" */;
+			buildPhases = (
+				116DE0542EE505F500AEADAA /* Sources */,
+				116DE0552EE505F500AEADAA /* Frameworks */,
+				116DE0562EE505F500AEADAA /* Resources */,
+				115BDD3C2EEA975E00CA907D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				116DE05A2EE505F500AEADAA /* voice assistant */,
+			);
+			name = "voice assistant";
+			packageProductDependencies = (
+				115BDDA72EEBDF5900CA907D /* FirebaseAuth */,
+				115BDDA92EEBDF5900CA907D /* FirebaseCore */,
+				115BDDAB2EEBDF5900CA907D /* FirebaseDatabase */,
+				115BDDAD2EEBDF5900CA907D /* FirebaseFirestore */,
+				115BDDAF2EEBDF5900CA907D /* FirebaseFirestoreCombine-Community */,
+				115BDDB22EEBDFC100CA907D /* GoogleSignIn */,
+				115BDDB42EEBDFC100CA907D /* GoogleSignInSwift */,
+			);
+			productName = "voice assistant";
+			productReference = 116DE0582EE505F500AEADAA /* voice assistant.app */;
+			productType = "com.apple.product-type.application";
+		};
+		116DE0662EE505F600AEADAA /* voice assistantTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 116DE07E2EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistantTests" */;
+			buildPhases = (
+				116DE0632EE505F600AEADAA /* Sources */,
+				116DE0642EE505F600AEADAA /* Frameworks */,
+				116DE0652EE505F600AEADAA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				116DE0692EE505F600AEADAA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				116DE06A2EE505F600AEADAA /* voice assistantTests */,
+			);
+			name = "voice assistantTests";
+			packageProductDependencies = (
+			);
+			productName = "voice assistantTests";
+			productReference = 116DE0672EE505F600AEADAA /* voice assistantTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		116DE0702EE505F600AEADAA /* voice assistantUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 116DE0812EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistantUITests" */;
+			buildPhases = (
+				116DE06D2EE505F600AEADAA /* Sources */,
+				116DE06E2EE505F600AEADAA /* Frameworks */,
+				116DE06F2EE505F600AEADAA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				116DE0732EE505F600AEADAA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				116DE0742EE505F600AEADAA /* voice assistantUITests */,
+			);
+			name = "voice assistantUITests";
+			packageProductDependencies = (
+			);
+			productName = "voice assistantUITests";
+			productReference = 116DE0712EE505F600AEADAA /* voice assistantUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		116DE0502EE505F500AEADAA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2610;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					116DE0572EE505F500AEADAA = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					116DE0662EE505F600AEADAA = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 116DE0572EE505F500AEADAA;
+					};
+					116DE0702EE505F600AEADAA = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 116DE0572EE505F500AEADAA;
+					};
+				};
+			};
+			buildConfigurationList = 116DE0532EE505F500AEADAA /* Build configuration list for PBXProject "voice assistant" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 116DE04F2EE505F500AEADAA;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				115BDDB12EEBDFC100CA907D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 116DE0592EE505F500AEADAA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				116DE0572EE505F500AEADAA /* voice assistant */,
+				116DE0662EE505F600AEADAA /* voice assistantTests */,
+				116DE0702EE505F600AEADAA /* voice assistantUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		116DE0562EE505F500AEADAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				115BDD9F2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE0652EE505F600AEADAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				115BDD9E2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE06F2EE505F600AEADAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				115BDD9D2EEBD40A00CA907D /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		116DE0542EE505F500AEADAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE0632EE505F600AEADAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		116DE06D2EE505F600AEADAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		116DE0692EE505F600AEADAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 116DE0572EE505F500AEADAA /* voice assistant */;
+			targetProxy = 116DE0682EE505F600AEADAA /* PBXContainerItemProxy */;
+		};
+		116DE0732EE505F600AEADAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 116DE0572EE505F500AEADAA /* voice assistant */;
+			targetProxy = 116DE0722EE505F600AEADAA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		116DE0792EE505F600AEADAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		116DE07A2EE505F600AEADAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 254DA9X672;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		116DE07C2EE505F600AEADAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "voice-assistant-Info.plist";
+				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleURLName = \"Voice Assistant\"; CFBundleURLSchemes = (voiceassistant);})";
+				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow recording voice messages.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow transcribing voice messages.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistant";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		116DE07D2EE505F600AEADAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "voice-assistant-Info.plist";
+				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleURLName = \"Voice Assistant\"; CFBundleURLSchemes = (voiceassistant);})";
+				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow recording voice messages.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow transcribing voice messages.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistant";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		116DE07F2EE505F600AEADAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistantTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/voice assistant.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/voice assistant";
+			};
+			name = Debug;
+		};
+		116DE0802EE505F600AEADAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistantTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/voice assistant.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/voice assistant";
+			};
+			name = Release;
+		};
+		116DE0822EE505F600AEADAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistantUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "voice assistant";
+			};
+			name = Debug;
+		};
+		116DE0832EE505F600AEADAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 254DA9X672;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "nikitab.voice-assistantUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "voice assistant";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		116DE0532EE505F500AEADAA /* Build configuration list for PBXProject "voice assistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				116DE0792EE505F600AEADAA /* Debug */,
+				116DE07A2EE505F600AEADAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		116DE07B2EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				116DE07C2EE505F600AEADAA /* Debug */,
+				116DE07D2EE505F600AEADAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		116DE07E2EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistantTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				116DE07F2EE505F600AEADAA /* Debug */,
+				116DE0802EE505F600AEADAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		116DE0812EE505F600AEADAA /* Build configuration list for PBXNativeTarget "voice assistantUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				116DE0822EE505F600AEADAA /* Debug */,
+				116DE0832EE505F600AEADAA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.7.0;
+			};
+		};
+		115BDDB12EEBDFC100CA907D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		115BDDA72EEBDF5900CA907D /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		115BDDA92EEBDF5900CA907D /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		115BDDAB2EEBDF5900CA907D /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		115BDDAD2EEBDF5900CA907D /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		115BDDAF2EEBDF5900CA907D /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDA02EEBDD9A00CA907D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+		115BDDB22EEBDFC100CA907D /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDB12EEBDFC100CA907D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		115BDDB42EEBDFC100CA907D /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 115BDDB12EEBDFC100CA907D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 116DE0502EE505F500AEADAA /* Project object */;
+}
