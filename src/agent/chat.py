@@ -20,6 +20,8 @@ class ChatAgent:
         session_id: str,
         user_message: str,
         user_id: Optional[str] = None,
+        allowed_tool_tags: Optional[Sequence[str]] = None,
+        timezone_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Take one user turn, call the MCP bridge, and store history in memory."""
         session = session_store.get_session(session_id, user_id=user_id)
@@ -33,6 +35,8 @@ class ChatAgent:
         result = await run_chat_with_mcp_tools(
             messages=session_messages,
             context_prefix=self.context_prefix,
+            allowed_tags=allowed_tool_tags,
+            timezone_name=timezone_name,
         )
 
         assistant_msg = result["assistant_message"]
