@@ -8,6 +8,7 @@ import os
 from collections.abc import Iterable as ABCIterable
 from datetime import datetime, timezone
 import re
+import time
 from zoneinfo import ZoneInfo
 from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TYPE_CHECKING
@@ -87,6 +88,10 @@ def _filter_tools(
     names = set(allowed_names or [])
     any_tags = {str(t) for t in (allowed_tags or [])}
     tag_set = set(required_tags or [])
+    # If the caller explicitly provided allowed_names (even empty), respect it.
+    # Empty list means "no tools allowed".
+    if allowed_names is not None and not names:
+        return []
     # If the caller explicitly provided allowed_tags (even empty), respect it.
     # Empty list means "no tools allowed".
     if allowed_tags is not None and not any_tags:
@@ -170,6 +175,33 @@ _CONFIRM_RE = re.compile(
     re.IGNORECASE,
 )
 
+
+def _append_stream_text(existing: str, chunk: str) -> str:
+    """
+    Append streamed text chunks while fixing common missing-space boundaries like:
+      "hours." + "There" -> "hours. There"
+    Keep this conservative to avoid changing formatting.
+    """
+    if not chunk:
+        return existing
+    if not existing:
+        return chunk
+
+    last = existing[-1]
+    first = chunk[0]
+    last_is_sentence_punct = last in {".", "!", "?"}
+    chunk_starts_with_ws = first.isspace() or first == "\n"
+    chunk_starts_with_alnum = first.isalpha() or first.isdigit()
+    if last_is_sentence_punct and (not chunk_starts_with_ws) and chunk_starts_with_alnum:
+        # Avoid splitting email addresses / domains like "egor@gmail." + "com"
+        if last == ".":
+            # Look at the last "token" (since last whitespace) to decide if this period
+            # is likely part of an email/domain rather than end-of-sentence punctuation.
+            token = existing.rsplit(None, 1)[-1] if existing.strip() else existing
+            if "@" in token:
+                return existing + chunk  # keep glued: gmail.com
+        return existing + " " + chunk
+    return existing + chunk
 
 def _last_user_message_text(conversation: Sequence[Dict[str, Any]]) -> str:
     for msg in reversed(conversation):
@@ -495,8 +527,8 @@ async def run_chat_with_mcp_tools_streaming(
 
                     # Handle text content
                     if delta.content:
-                        current_content += delta.content
-                        full_text += delta.content
+                        current_content = _append_stream_text(current_content, delta.content)
+                        full_text = _append_stream_text(full_text, delta.content)
                         yield {"type": "text_delta", "data": delta.content}
 
                     # Handle tool calls (streamed in parts)
@@ -557,6 +589,7 @@ async def run_chat_with_mcp_tools_streaming(
 
                 yield {"type": "tool_call_start", "data": {"name": func_name, "arguments": args}}
 
+                started = time.monotonic()
                 # Enforce confirmation for sensitive tools (tagged requires_confirmation)
                 if "requires_confirmation" in tool_tags_by_name.get(func_name, set()):
                     last_user = _last_user_message_text(conversation)
@@ -575,7 +608,11 @@ async def run_chat_with_mcp_tools_streaming(
                     result = await client.call_tool(func_name, arguments=args)
                     payload_text = _stringify_tool_result(result)
 
-                yield {"type": "tool_call_result", "data": {"name": func_name, "result": payload_text}}
+                duration_ms = int((time.monotonic() - started) * 1000)
+                yield {
+                    "type": "tool_call_result",
+                    "data": {"name": func_name, "result": payload_text, "durationMs": duration_ms},
+                }
 
                 conversation.append({
                     "role": "tool",

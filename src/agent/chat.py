@@ -19,7 +19,9 @@ class ChatAgent:
         *,
         session_id: str,
         user_message: str,
+        user_message_for_llm: Optional[str] = None,
         user_id: Optional[str] = None,
+        allowed_tool_names: Optional[Sequence[str]] = None,
         allowed_tool_tags: Optional[Sequence[str]] = None,
         timezone_name: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -29,12 +31,17 @@ class ChatAgent:
         session_store.trim_history(session)
 
         session_messages = [turn.to_message() for turn in session.turns]
+        # Keep the stored session history as the user's original text, but allow an optional
+        # normalized version to be sent to the LLM for better spelling/grammar and tool args.
+        if user_message_for_llm and session_messages and session_messages[-1].get("role") == "user":
+            session_messages[-1] = {**session_messages[-1], "content": user_message_for_llm}
         historical_count = len(session_messages)
         context_len = len(self.context_prefix or [])
 
         result = await run_chat_with_mcp_tools(
             messages=session_messages,
             context_prefix=self.context_prefix,
+            allowed_names=allowed_tool_names,
             allowed_tags=allowed_tool_tags,
             timezone_name=timezone_name,
         )

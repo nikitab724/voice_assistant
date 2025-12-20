@@ -14,6 +14,7 @@ from .gmail import (
     mark_gmail_emails_read_tool,
     create_gmail_draft_tool,
     send_gmail_draft_tool,
+    list_gmail_contacts_tool,
 )
 
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     "mark_gmail_emails_read_tool",
     "create_gmail_draft_tool",
     "send_gmail_draft_tool",
+    "list_gmail_contacts_tool",
 ]
 

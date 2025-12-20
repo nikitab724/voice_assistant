@@ -16,6 +16,7 @@ from workflows import (
     mark_gmail_emails_read_tool,
     create_gmail_draft_tool,
     send_gmail_draft_tool,
+    list_gmail_contacts_tool,
 )
 
 
@@ -270,7 +271,7 @@ async def mark_gmail_emails_read(
 
 
 @server.tool(
-    description="Create a Gmail draft (does not send). Use this when the user asks you to email someone. You must ask for confirmation before sending.",
+    description="Create a Gmail draft (does not send). If the user provides a person/name instead of an email address, first call list_gmail_contacts to find the most likely address and confirm it with the user. After creating the draft, instruct the user to review and tap the Send button in the app (do not attempt to send automatically).",
     tags=["gmail"],
 )
 async def create_gmail_draft(
@@ -292,7 +293,7 @@ async def create_gmail_draft(
 
 
 @server.tool(
-    description="Send an existing Gmail draft by draft_id. This is a sensitive action and requires user confirmation.",
+    description="Send an existing Gmail draft by draft_id. This is a sensitive action and should normally be triggered by explicit UI confirmation (Send button) rather than natural language.",
     tags=["gmail", "requires_confirmation"],
 )
 async def send_gmail_draft(
@@ -300,6 +301,28 @@ async def send_gmail_draft(
     context: Context | None = None,
 ):
     return await send_gmail_draft_tool(draft_id=draft_id, context=context)
+
+
+@server.tool(
+    description="List suggested contacts (name/email) derived from your recent Gmail messages. Use this to resolve 'email John' into a real address. The optional query is only a ranking hint (misspellings are common), not a strict filter.",
+    tags=["gmail"],
+)
+async def list_gmail_contacts(
+    query: Annotated[str | None, "Optional name/email substring to filter (e.g. 'john' or 'acme.com')."] = None,
+    lookback_days: Annotated[int, "How far back to scan in days. Defaults to 90."] = 90,
+    max_messages: Annotated[int, "Max messages to scan (1-500). Defaults to 60."] = 60,
+    max_contacts: Annotated[int, "Max contacts to return (1-100). Defaults to 50."] = 50,
+    exclude_no_reply: Annotated[bool, "Exclude noreply/no-reply addresses. Defaults to true."] = True,
+    context: Context | None = None,
+):
+    return await list_gmail_contacts_tool(
+        query=query,
+        lookback_days=lookback_days,
+        max_messages=max_messages,
+        max_contacts=max_contacts,
+        exclude_no_reply=exclude_no_reply,
+        context=context,
+    )
 
 
 if __name__ == "__main__":

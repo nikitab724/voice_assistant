@@ -33,6 +33,25 @@ class AuthManager: ObservableObject {
                 self?.isLoading = false
             }
         }
+        
+        // Restore previous Google Sign-In session (for access tokens)
+        Task {
+            await restorePreviousSignIn()
+        }
+    }
+    
+    /// Restore previous Google session to recover access tokens
+    private func restorePreviousSignIn() async {
+        do {
+            let user = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+            self.googleAccessToken = user.accessToken.tokenString
+            self.googleRefreshToken = user.refreshToken.tokenString
+            print("[Auth] Restored previous session for: \(user.profile?.email ?? "unknown")")
+            print("[Auth] Access token: \(String(describing: googleAccessToken?.prefix(20)))...")
+        } catch {
+            // No previous session or it expired - user will need to sign in again
+            print("[Auth] No previous Google session to restore: \(error.localizedDescription)")
+        }
     }
     
     func signInWithGoogle() async {
