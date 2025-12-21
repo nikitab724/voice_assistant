@@ -58,16 +58,6 @@
 		116DE0712EE505F600AEADAA /* voice assistantUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "voice assistantUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		115BDDA62EEBDE8800CA907D /* Exceptions for "voice assistant" folder in "voice assistant" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"voice-assistant-Info.plist",
-			);
-			target = 116DE0572EE505F500AEADAA /* voice assistant */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		115BDD2D2EEA975D00CA907D /* VoiceAssistantWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -76,9 +66,6 @@
 		};
 		116DE05A2EE505F500AEADAA /* voice assistant */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				115BDDA62EEBDE8800CA907D /* Exceptions for "voice assistant" folder in "voice assistant" target */,
-			);
 			path = "voice assistant";
 			sourceTree = "<group>";
 		};
@@ -484,6 +471,7 @@
 				INFOPLIST_FILE = "voice-assistant-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleURLName = \"Voice Assistant\"; CFBundleURLSchemes = (voiceassistant);})";
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to get weather for your current location";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow recording voice messages.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow transcribing voice messages.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -522,6 +510,7 @@
 				INFOPLIST_FILE = "voice-assistant-Info.plist";
 				INFOPLIST_KEY_CFBundleURLTypes = "({CFBundleURLName = \"Voice Assistant\"; CFBundleURLSchemes = (voiceassistant);})";
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to get weather for your current location";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Allow recording voice messages.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Allow transcribing voice messages.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;

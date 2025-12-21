@@ -11,6 +11,7 @@ import Combine
 import AVFoundation
 import Speech
 import FirebaseAuth
+import CoreLocation
 
 // MARK: - Data Models
 
@@ -19,6 +20,43 @@ struct ChatMessage: Identifiable, Equatable {
     let text: String
     let isUser: Bool
     let timestamp = Date()
+}
+
+// MARK: - Location Manager
+
+class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    @Published var location: CLLocation?
+    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyKilometer // City-level is fine for weather
+    }
+    
+    func requestPermission() {
+        manager.requestWhenInUseAuthorization()
+    }
+    
+    func requestLocation() {
+        manager.requestLocation()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        location = locations.last
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("[Location] Error: \(error.localizedDescription)")
+    }
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+        if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
+            manager.requestLocation()
+        }
+    }
 }
 
 // MARK: - Chat Client
@@ -34,6 +72,8 @@ class ChatClient {
         let allowed_tool_names: [String]?
         let allowed_tool_tags: [String]?
         let timezone_name: String?
+        let user_latitude: Double?
+        let user_longitude: Double?
     }
     
     struct ChatResponse: Decodable {
@@ -160,7 +200,9 @@ class ChatClient {
         googleAccessToken: String?,
         allowedToolNames: [String]?,
         allowedToolTags: [String]?,
-        timezoneName: String?
+        timezoneName: String?,
+        userLatitude: Double? = nil,
+        userLongitude: Double? = nil
     ) async throws -> ChatResponse {
         guard let url = URL(string: "\(baseURL)/api/chat") else {
             throw URLError(.badURL)
@@ -177,7 +219,9 @@ class ChatClient {
             google_access_token: googleAccessToken,
             allowed_tool_names: allowedToolNames,
             allowed_tool_tags: allowedToolTags,
-            timezone_name: timezoneName
+            timezone_name: timezoneName,
+            user_latitude: userLatitude,
+            user_longitude: userLongitude
         )
         request.httpBody = try JSONEncoder().encode(body)
         
@@ -209,7 +253,9 @@ class ChatClient {
         googleAccessToken: String?,
         allowedToolNames: [String]?,
         allowedToolTags: [String]?,
-        timezoneName: String?
+        timezoneName: String?,
+        userLatitude: Double? = nil,
+        userLongitude: Double? = nil
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         AsyncThrowingStream { continuation in
             Task {
@@ -233,7 +279,9 @@ class ChatClient {
                         google_access_token: googleAccessToken,
                         allowed_tool_names: allowedToolNames,
                         allowed_tool_tags: allowedToolTags,
-                        timezone_name: timezoneName
+                        timezone_name: timezoneName,
+                        user_latitude: userLatitude,
+                        user_longitude: userLongitude
                     )
                     request.httpBody = try JSONEncoder().encode(body)
                     
@@ -470,6 +518,8 @@ struct ToolDrawerView: View {
     @Binding var isOpen: Bool
     @Binding var calendarEnabled: Bool
     @Binding var gmailEnabled: Bool
+    @Binding var tasksEnabled: Bool
+    @Binding var weatherEnabled: Bool
     @Binding var timezoneName: String
     @Binding var isContinuousMode: Bool
     let availableTools: [ChatClient.ToolInfo]
@@ -478,6 +528,8 @@ struct ToolDrawerView: View {
     
     @State private var calendarExpanded = true
     @State private var gmailExpanded = true
+    @State private var tasksExpanded = true
+    @State private var weatherExpanded = true
     @State private var otherExpanded = false
     
     private let timezones: [(label: String, value: String)] = [
@@ -542,6 +594,8 @@ struct ToolDrawerView: View {
                     
                     Toggle("Calendar", isOn: $calendarEnabled)
                     Toggle("Gmail", isOn: $gmailEnabled)
+                    Toggle("Tasks", isOn: $tasksEnabled)
+                    Toggle("Weather", isOn: $weatherEnabled)
                     Toggle("Continuous Voice", isOn: $isContinuousMode)
                         .padding(.top, 4)
                     
@@ -570,9 +624,23 @@ struct ToolDrawerView: View {
                                 isExpanded: $gmailExpanded
                             )
                             
+                            toolDisclosureSection(
+                                title: "Tasks",
+                                tag: "tasks",
+                                enabled: tasksEnabled,
+                                isExpanded: $tasksExpanded
+                            )
+                            
+                            toolDisclosureSection(
+                                title: "Weather",
+                                tag: "weather",
+                                enabled: weatherEnabled,
+                                isExpanded: $weatherExpanded
+                            )
+
                             let otherTools = availableTools.filter { tool in
                                 let tags = Set(tool.tags)
-                                return !tags.contains("calendar") && !tags.contains("gmail")
+                                return !tags.contains("calendar") && !tags.contains("gmail") && !tags.contains("tasks") && !tags.contains("weather")
                             }
                             if !otherTools.isEmpty {
                                 DisclosureGroup(isExpanded: $otherExpanded) {
@@ -691,7 +759,7 @@ struct ToolDrawerView: View {
                     .padding(.top, 8)
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: tag == "calendar" ? "calendar" : "envelope")
+                        Image(systemName: tag == "calendar" ? "calendar" : tag == "tasks" ? "checklist" : tag == "weather" ? "cloud.sun" : "envelope")
                         Text(title)
                             .font(.subheadline)
                             .fontWeight(.semibold)
@@ -715,7 +783,8 @@ struct ToolDrawerView: View {
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
-    
+    @StateObject private var locationManager = LocationManager()
+
     private let chatClient = ChatClient()
     
     @State private var messages: [ChatMessage] = []
@@ -732,10 +801,26 @@ struct ContentView: View {
     @State private var isToolDrawerOpen = false
     @AppStorage("tools.enabled.calendar") private var calendarToolsEnabled = true
     @AppStorage("tools.enabled.gmail") private var gmailToolsEnabled = true
+    @AppStorage("tools.enabled.tasks") private var tasksToolsEnabled = true
+    @AppStorage("tools.enabled.weather") private var weatherToolsEnabled = true
     @AppStorage("user.timezone") private var timezoneName = "America/Chicago"
     @AppStorage("tools.enabled.names") private var enabledToolNamesStored = ""
     @AppStorage("voice.continuousMode") private var isContinuousMode = false
     @State private var availableTools: [ChatClient.ToolInfo] = []
+    
+    // Tool Success Toast
+    struct ToolSuccessToast: Identifiable, Equatable {
+        let id = UUID()
+        let icon: String
+        let title: String
+        let subtitle: String
+        var link: URL? = nil
+        
+        static func == (lhs: ToolSuccessToast, rhs: ToolSuccessToast) -> Bool {
+            lhs.id == rhs.id
+        }
+    }
+    @State private var toolSuccessToast: ToolSuccessToast?
     
     // Continuous Recording State
     @State private var audioEngine = AVAudioEngine()
@@ -770,157 +855,243 @@ struct ContentView: View {
     
     // Focus and keyboard
     @FocusState private var isComposerFocused: Bool
+    @State private var isHistoryOpen = false
+    @State private var isComposerExpanded = false
+    
+    private var assistantState: MeshOrbView.AssistantState {
+        if isRecording { return .listening }
+        if isAwaitingResponse { return .thinking }
+        if isAssistantSpeaking { return .speaking }
+        return .idle
+    }
+    
+    private var orbAudioLevel: CGFloat {
+        // Use the average of waveform values for the orb's overall reaction
+        waveformValues.reduce(0, +) / CGFloat(waveformValues.count)
+    }
+    
+    private var assistantColor: Color {
+        switch assistantState {
+        case .idle: return .blue
+        case .listening: return .red
+        case .thinking: return .purple
+        case .speaking: return .cyan
+        }
+    }
     
     var body: some View {
-        ZStack(alignment: .leading) {
-            NavigationStack {
-                VStack(spacing: 0) {
-                    // Messages
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 8) {
-                                ForEach(messages) { message in
-                                    chatBubble(for: message)
-                                        .id(message.id)
-                                }
-                                
-                                if showTypingIndicator {
+        ZStack(alignment: .top) {
+            // 1. Background layer
+            Color.black.ignoresSafeArea()
+                .zIndex(0)
+            
+            // Subtle animated background mesh (Cleaned up for simplicity)
+            RadialGradient(
+                colors: [assistantColor.opacity(0.1), .black],
+                center: .center,
+                startRadius: 0,
+                endRadius: 600
+            )
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isComposerFocused = false
+            }
+            .zIndex(1)
+            
+            // 2. Main content layer (The Orb)
+            VStack {
+                Spacer()
+                
+                MeshOrbView(state: assistantState, audioLevel: orbAudioLevel)
+                    .offset(y: showDraftSheet ? -100 : 0)
+                    .onTapGesture {
+                        if !isRecording && !isAwaitingResponse && !isAssistantSpeaking {
+                            startRecording()
+                        } else if isRecording {
+                            sendMessage()
+                        } else if isAssistantSpeaking {
+                            stopAudio()
+                        }
+                    }
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .zIndex(2)
+            
+            // 3. UI Overlays (History, Composer, Tools)
+            
+            // Top Header (Profile & Timezone)
+            VStack {
+                HStack {
+                    Spacer()
+                    HStack(spacing: 16) {
+                        // Timezone Picker
+                        Menu {
+                            ForEach(TimeZone.knownTimeZoneIdentifiers.prefix(20), id: \.self) { id in
+                                Button {
+                                    timezoneName = id
+                                } label: {
                                     HStack {
-                                        TypingIndicatorView()
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .id("typing")
-                                }
-
-                                // Bottom marker (used to detect if user is scrolled to bottom)
-                                Color.clear
-                                    .frame(height: 1)
-                                    .id("bottom")
-                                    .background(
-                                        GeometryReader { geo in
-                                            Color.clear.preference(
-                                                key: BottomMarkerYKey.self,
-                                                value: geo.frame(in: .named("chatScroll")).maxY
-                                            )
+                                        Text(id)
+                                        if timezoneName == id {
+                                            Image(systemName: "checkmark")
                                         }
-                                    )
-                            }
-                            .padding(.vertical, 12)
-                        }
-                        .coordinateSpace(name: "chatScroll")
-                        .background(
-                            GeometryReader { geo in
-                                Color.clear.preference(key: ScrollViewHeightKey.self, value: geo.size.height)
-                            }
-                        )
-                        .onChange(of: messages.count) { _, _ in
-                            if isUserAtBottom {
-                                scrollToBottom(proxy: proxy)
-                            }
-                        }
-                        .onChange(of: isAwaitingResponse) { _, _ in
-                            if isUserAtBottom {
-                                scrollToBottom(proxy: proxy)
-                            }
-                        }
-                        .onChange(of: showTypingIndicator) { _, _ in
-                            if isUserAtBottom {
-                                scrollToBottom(proxy: proxy)
-                            }
-                        }
-                        .onChange(of: scrollRequest) { _, _ in
-                            if isUserAtBottom {
-                                scrollToBottom(proxy: proxy, delay: 0)
-                            }
-                        }
-                        .onPreferenceChange(ScrollViewHeightKey.self) { height in
-                            scrollViewHeight = height
-                        }
-                        .onPreferenceChange(BottomMarkerYKey.self) { bottomY in
-                            // If the bottom marker is within the visible scroll view (plus a small threshold),
-                            // treat the user as "at bottom".
-                            let threshold: CGFloat = 40
-                            isUserAtBottom = bottomY <= (scrollViewHeight + threshold)
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                            scrollToBottom(proxy: proxy, delay: 0.1)
-                        }
-                    }
-                    
-                    // Hide composer when draft confirmation popup is showing
-                    if !showDraftSheet {
-                        Divider()
-                        
-                        // Composer
-                        composer
-                    }
-                }
-                .navigationTitle("Assistant")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        HStack(spacing: 10) {
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
-                                    isToolDrawerOpen.toggle()
+                                    }
                                 }
-                            } label: {
-                                Image(systemName: "line.3.horizontal")
-                                    .foregroundStyle(.blue)
                             }
                             
-                            Menu {
-                                Button("Chicago (CT)") { timezoneName = "America/Chicago" }
-                                Button("New York (ET)") { timezoneName = "America/New_York" }
-                                Button("Los Angeles (PT)") { timezoneName = "America/Los_Angeles" }
-                                Button("UTC") { timezoneName = "UTC" }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "globe")
-                                    Text(timezoneName == "America/Chicago" ? "CT" :
-                                         timezoneName == "America/New_York" ? "ET" :
-                                         timezoneName == "America/Los_Angeles" ? "PT" : "UTC")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color(.systemGray6))
-                                .clipShape(Capsule())
-                            }
+                            Divider()
+                            
+                            Text("More in settings...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } label: {
+                            Image(systemName: "globe")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .padding(8)
+                                .background(.white.opacity(0.01)) // Increase tap target
                         }
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                        
+                        // Profile/Account Button
                         Menu {
-                            if let email = authManager.user?.email {
-                                Text(email)
-                            }
-                            Button(role: .destructive) {
-                                authManager.signOut()
-                            } label: {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                            if let user = authManager.user {
+                                Section {
+                                    Text(user.email ?? "User")
+                                        .font(.caption)
+                                }
+                                Button(role: .destructive) {
+                                    authManager.signOut()
+                                } label: {
+                                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                }
+                            } else {
+                                Button {
+                                    Task {
+                                        await authManager.signInWithGoogle()
+                                    }
+                                } label: {
+                                    Label("Sign In with Google", systemImage: "person.crop.circle.badge.plus")
+                                }
                             }
                         } label: {
-                            Image(systemName: "person.circle.fill")
-                                .foregroundStyle(.blue)
+                            Group {
+                                if authManager.user != nil {
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(.white.opacity(0.8))
+                                } else {
+                                    Image(systemName: "person.crop.circle")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(.white.opacity(0.6))
+                                }
+                            }
+                            .padding(8)
+                            .background(.white.opacity(0.01)) // Increase tap target
                         }
                     }
+                    .padding(.trailing, 20)
+                    .padding(.top, 10)
                 }
-                .onReceive(recordingTimer) { _ in
-                    guard isRecording, let start = recordingStart else { return }
-                    recordingElapsed = Date().timeIntervalSince(start)
-                    updateMeter()
-                    
-                    // Auto-stop after 3 minutes max
-                    if recordingElapsed >= 180 {
-                        stopContinuousRecording()
+                Spacer()
+            }
+            .zIndex(10) // Below History Drawer
+            
+            // Pull handle hint
+            VStack {
+                Capsule()
+                    .fill(.secondary.opacity(0.3))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 8)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .frame(height: 100)
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        if value.translation.height > 50 {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                isHistoryOpen = true
+                            }
+                        }
                     }
+            )
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isHistoryOpen = true
                 }
             }
-            .disabled(isToolDrawerOpen)
+            .zIndex(11)
             
+            // Tool Success Toast (slides in below top handle)
+            VStack {
+                if let toast = toolSuccessToast {
+                    HStack(spacing: 12) {
+                        Image(systemName: toast.icon)
+                            .font(.title2)
+                            .foregroundStyle(.green)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(toast.title)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text(toast.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        Spacer()
+
+                        // Link button (if present)
+                        if let url = toast.link {
+                            Button {
+                                UIApplication.shared.open(url)
+                            } label: {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.body)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                        
+                        // Close button
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { 
+                                toolSuccessToast = nil 
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.secondary)
+                                .padding(6)
+                                .background(Color.primary.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 60)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: toolSuccessToast)
+            .zIndex(5)
+            
+            // History Drawer
+            HistoryDrawer(isOpen: $isHistoryOpen, messages: messages, showTypingIndicator: showTypingIndicator)
+                .zIndex(20)
+            
+            // Drawer & Overlay
             if isToolDrawerOpen {
                 Rectangle()
                     .fill(.ultraThinMaterial)
@@ -930,12 +1101,15 @@ struct ContentView: View {
                             isToolDrawerOpen = false
                         }
                     }
+                    .zIndex(25)
             }
             
             ToolDrawerView(
                 isOpen: $isToolDrawerOpen,
                 calendarEnabled: $calendarToolsEnabled,
                 gmailEnabled: $gmailToolsEnabled,
+                tasksEnabled: $tasksToolsEnabled,
+                weatherEnabled: $weatherToolsEnabled,
                 timezoneName: $timezoneName,
                 isContinuousMode: $isContinuousMode,
                 availableTools: availableTools,
@@ -945,8 +1119,9 @@ struct ContentView: View {
                 ),
                 refreshTools: { Task { await refreshToolsList() } }
             )
+            .zIndex(30)
             
-            // Draft confirmation overlay (slides up from bottom)
+            // Draft confirmation overlay
             if showDraftSheet, let d = pendingDraft {
                 VStack {
                     Spacer()
@@ -1031,9 +1206,9 @@ struct ContentView: View {
                             .padding(.vertical, 8)
                         }
                         
-                        // Action buttons
+                        // Actions
                         HStack(spacing: 12) {
-                            Button {
+                            Button(role: .destructive) {
                                 pendingDraft = nil
                                 showDraftSheet = false
                             } label: {
@@ -1041,28 +1216,27 @@ struct ContentView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
                                     .background(Color(.systemGray5))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .foregroundStyle(.primary)
                             
                             Button {
-                                sendPendingDraft()
-                            } label: {
-                                HStack {
-                                    if isSendingDraft {
-                                        ProgressView()
-                                            .tint(.white)
-                                    } else {
-                                        Image(systemName: "paperplane.fill")
-                                        Text("Send")
-                                    }
+                                Task {
+                                    await sendDraft(d)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.blue)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            } label: {
+                                if isSendingDraft {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Text("Send Email")
+                                        .fontWeight(.semibold)
+                                }
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.blue)
                             .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                             .disabled(isSendingDraft)
                         }
                     }
@@ -1075,8 +1249,77 @@ struct ContentView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showDraftSheet)
+                .zIndex(35)
+            }
+            
+            // Bottom UI (Drawer trigger & Composer)
+            VStack {
+                Spacer()
+                HStack(spacing: 20) {
+                    // Tool Drawer Trigger
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                            isToolDrawerOpen.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.6))
+                            .padding(12)
+                            .background(.white.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    
+                    Spacer()
+                    
+                    // Floating Composer
+                    HStack {
+                        if isComposerExpanded {
+                            TextField("Type message...", text: $draft)
+                                .focused($isComposerFocused)
+                                .onSubmit { sendMessage() }
+                                .padding(.horizontal, 12)
+                                .frame(height: 44)
+                            
+                            Button {
+                                sendMessage()
+                            } label: {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.title2)
+                                    .foregroundStyle(.blue)
+                            }
+                            .padding(.trailing, 8)
+                        } else {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    isComposerExpanded = true
+                                    isComposerFocused = true
+                                }
+                            } label: {
+                                Image(systemName: "keyboard")
+                                    .font(.title3)
+                                    .foregroundStyle(.white.opacity(0.6))
+                                    .padding(12)
+                            }
+                        }
+                    }
+                    .background(.white.opacity(0.1))
+                    .clipShape(Capsule())
+                    .frame(width: isComposerExpanded ? nil : 44)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+            }
+            .zIndex(40)
+        }
+        .onChange(of: isComposerFocused) { _, focused in
+            if !focused {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isComposerExpanded = false
+                }
             }
         }
+        .toolbar(.hidden)
         .onReceive(audioQueuePlayer.$isSpeaking) { speaking in
             isAssistantSpeaking = speaking
             if speaking {
@@ -1108,6 +1351,9 @@ struct ContentView: View {
             }
         }
         .task {
+            // Request location permission for weather
+            locationManager.requestPermission()
+            
             await refreshToolsList()
             // If this is the first launch (no stored selection yet), default-enable all tools we know about.
             if enabledToolNamesStored.isEmpty, !availableTools.isEmpty {
@@ -1125,12 +1371,20 @@ struct ContentView: View {
         .onChange(of: gmailToolsEnabled) { _, _ in
             applyServiceTogglesToToolSelection()
         }
+        .onChange(of: tasksToolsEnabled) { _, _ in
+            applyServiceTogglesToToolSelection()
+        }
+        .onChange(of: weatherToolsEnabled) { _, _ in
+            applyServiceTogglesToToolSelection()
+        }
     }
 
     private var allowedToolTags: [String]? {
         var tags: [String] = []
         if calendarToolsEnabled { tags.append("calendar") }
         if gmailToolsEnabled { tags.append("gmail") }
+        if tasksToolsEnabled { tags.append("tasks") }
+        if weatherToolsEnabled { tags.append("weather") }
         return tags
     }
 
@@ -1141,155 +1395,6 @@ struct ContentView: View {
         guard !availableTools.isEmpty else { return nil }
         // Explicit empty array means "no tools allowed" (server respects this).
         return Array(enabledToolNames).sorted()
-    }
-    
-    // MARK: - Composer
-    
-    private var composer: some View {
-        VStack(spacing: 8) {
-            if isRecording {
-                // Orb Recording UI
-                VStack(spacing: 20) {
-                    Button {
-                        sendMessage()
-                    } label: {
-                        ZStack {
-                            // Glowing breathing background
-                            Circle()
-                                .fill(Color.blue.opacity(0.1))
-                                .frame(width: 200, height: 200)
-                                .scaleEffect(1.0 + (waveformValues.last ?? 0) * 0.1)
-                            
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .frame(width: 180, height: 180)
-                                .shadow(color: .black.opacity(0.15), radius: 15)
-                            
-                            VStack(spacing: 16) {
-                                RecordingWaveformView(levels: waveformValues, color: .blue.opacity(0.7), scale: 45)
-                                    .frame(width: 120, height: 50)
-                                
-                                if !draft.isEmpty {
-                                    Text(draft)
-                                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                                        .foregroundStyle(.primary)
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(4)
-                                        .padding(.horizontal, 24)
-                                        .frame(width: 170)
-                                } else {
-                                    Text(isContinuousMode ? "Listening..." : "Speak now")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    Button {
-                        toggleRecording()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "stop.fill")
-                            Text("Finish Session")
-                        }
-                        .font(.footnote)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.red)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .background(Color.red.opacity(0.1))
-                        .clipShape(Capsule())
-                    }
-                }
-                .transition(.scale(scale: 0.8).combined(with: .opacity))
-                .padding(.bottom, 20)
-            } else {
-                // Standard Composer UI
-                HStack(alignment: .bottom, spacing: 10) {
-                    ZStack(alignment: .leading) {
-                        TextField("Message", text: $draft, axis: .vertical)
-                            .lineLimit(1...5)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .focused($isComposerFocused)
-                    }
-                    
-                    Button {
-                        toggleRecording()
-                    } label: {
-                        Image(systemName: "mic.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color.blue)
-                    }
-                    
-                    if !draft.isEmpty {
-                        Button {
-                            sendMessage()
-                        } label: {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(Color.blue)
-                        }
-                        .disabled(isAwaitingResponse)
-                    }
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: isRecording)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-    
-    // MARK: - Chat Bubble
-    
-    private func chatBubble(for message: ChatMessage) -> some View {
-        // Cap bubble width so it doesn't span the whole screen (avoid UIScreen.main deprecation).
-        let maxBubbleWidth: CGFloat = 300
-        
-        return HStack {
-            if message.isUser { Spacer(minLength: 60) }
-            
-            Group {
-                if message.isUser {
-                    Text(message.text)
-                } else {
-                    // Render assistant messages with markdown formatting for readability
-                    Text(.init(message.text))
-                }
-            }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    message.isUser
-                    ? Color.blue.opacity(0.85)
-                    : Color(.systemGray5).opacity(0.75)
-                )
-                .foregroundStyle(message.isUser ? Color.white : Color.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .frame(maxWidth: maxBubbleWidth, alignment: message.isUser ? .trailing : .leading)
-            
-            if !message.isUser { Spacer(minLength: 60) }
-        }
-        .padding(.horizontal, 16)
-    }
-    
-    // MARK: - Helpers
-    
-    private func scrollToBottom(proxy: ScrollViewProxy, delay: Double = 0.05) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            withAnimation(.easeOut(duration: 0.2)) {
-                if showTypingIndicator {
-                    proxy.scrollTo("typing", anchor: .bottom)
-                } else if let lastMessage = messages.last {
-                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                }
-            }
-        }
     }
     
     private func formatTime(_ interval: TimeInterval) -> String {
@@ -1340,204 +1445,115 @@ struct ContentView: View {
                     googleAccessToken: token,
                     allowedToolNames: allowedToolNames,
                     allowedToolTags: allowedToolTags,
-                    timezoneName: timezoneName
+                    timezoneName: timezoneName,
+                    userLatitude: locationManager.location?.coordinate.latitude,
+                    userLongitude: locationManager.location?.coordinate.longitude
                 )
                 
                 for try await event in stream {
-                    await MainActor.run {
-                        switch event {
-                        case .textDelta(let chunk):
-                            // Append to streaming text and update the last message
-                            if showTypingIndicator, !chunk.isEmpty {
-                                // First text arrived: hide typing indicator
-                                showTypingIndicator = false
-                            }
-                            streamingText = appendStreamingText(existing: streamingText, chunk: chunk)
-                            // Only create the assistant bubble once we actually have text
-                            if let last = messages.last, last.isUser {
-                                if !streamingText.isEmpty {
-                                    messages.append(ChatMessage(text: streamingText, isUser: false))
-                                }
-                            } else if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
-                                messages[lastIndex] = ChatMessage(text: streamingText, isUser: false)
-                            }
-                            if isUserAtBottom {
-                                scrollRequest += 1
-                            }
-                            
-                        case .toolCall(let name, let arguments):
-                            print("[Stream] Tool call: \(name)")
-                            print("[Stream] Tool args: \(arguments)")
-                            
-                        case .toolResult(let name, let result):
-                            let snippet = String(result.prefix(500))
-                            print("[Stream] Tool result: \(name)")
-                            print("[Stream] Tool result (first 500 chars): \(snippet)")
-                            
-                            // If we created an email draft, show a UI confirmation sheet.
-                            if name == "create_gmail_draft" {
-                                if let draft = parseDraftFromToolResult(result) {
-                                    pendingDraft = draft
-                                    showDraftSheet = true
-                                }
-                            }
-                            
-                        case .audio(let base64, _):
-                            playAudio(base64: base64)
-                            
-                        case .done(let fullText):
-                            isAwaitingResponse = false
+                    switch event {
+                    case .textDelta(let chunk):
+                        // Append to streaming text and update the last message
+                        if showTypingIndicator, !chunk.isEmpty {
+                            // First text arrived: hide typing indicator
                             showTypingIndicator = false
-                            // Ensure final text is set
-                            let finalText = fullText.isEmpty ? streamingText : fullText
-                            if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
-                                messages[lastIndex] = ChatMessage(text: finalText, isUser: false)
-                            } else if !finalText.isEmpty {
-                                messages.append(ChatMessage(text: finalText, isUser: false))
+                        }
+                        streamingText = appendStreamingText(existing: streamingText, chunk: chunk)
+                        // Only create the assistant bubble once we actually have text
+                        if let last = messages.last, last.isUser {
+                            if !streamingText.isEmpty {
+                                messages.append(ChatMessage(text: streamingText, isUser: false))
                             }
-                            streamingText = ""
-                            if isUserAtBottom {
-                                scrollRequest += 1
+                        } else if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
+                            messages[lastIndex] = ChatMessage(text: streamingText, isUser: false)
+                        }
+                        if isUserAtBottom {
+                            scrollRequest += 1
+                        }
+                        
+                    case .toolCall(let name, let arguments):
+                        print("[Stream] Tool call: \(name)")
+                        print("[Stream] Tool args: \(arguments)")
+                        
+                    case .toolResult(let name, let result):
+                        let snippet = String(result.prefix(500))
+                        print("[Stream] Tool result: \(name)")
+                        print("[Stream] Tool result (first 500 chars): \(snippet)")
+                        
+                        // If we created an email draft, show a UI confirmation sheet.
+                        if name == "create_gmail_draft" {
+                            if let draft = parseDraftFromToolResult(result) {
+                                pendingDraft = draft
+                                showDraftSheet = true
                             }
-                            
-                        case .error(let message):
-                            isAwaitingResponse = false
-                            showTypingIndicator = false
-                            let errText = "Error: \(message)"
-                            if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
-                                messages[lastIndex] = ChatMessage(text: errText, isUser: false)
-                            } else {
-                                messages.append(ChatMessage(text: errText, isUser: false))
-                            }
-                            streamingText = ""
-                            if isUserAtBottom {
-                                scrollRequest += 1
-                            }
+                        }
+                        
+                        // Show success toast for other tool results
+                        showToolSuccessToast(name: name, result: result)
+                        
+                    case .audio(let base64, _):
+                        playAudio(base64: base64)
+                        
+                    case .done(let fullText):
+                        isAwaitingResponse = false
+                        showTypingIndicator = false
+                        // Ensure final text is set
+                        let finalText = fullText.isEmpty ? streamingText : fullText
+                        if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
+                            messages[lastIndex] = ChatMessage(text: finalText, isUser: false)
+                        } else if !finalText.isEmpty {
+                            messages.append(ChatMessage(text: finalText, isUser: false))
+                        }
+                        streamingText = ""
+                        if isUserAtBottom {
+                            scrollRequest += 1
+                        }
+                        
+                    case .error(let message):
+                        isAwaitingResponse = false
+                        showTypingIndicator = false
+                        let errText = "Error: \(message)"
+                        if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
+                            messages[lastIndex] = ChatMessage(text: errText, isUser: false)
+                        } else {
+                            messages.append(ChatMessage(text: errText, isUser: false))
+                        }
+                        streamingText = ""
+                        if isUserAtBottom {
+                            scrollRequest += 1
                         }
                     }
                 }
             } catch {
-                await MainActor.run {
-                    isAwaitingResponse = false
-                    showTypingIndicator = false
-                    if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
-                        messages[lastIndex] = ChatMessage(text: "Error: \(error.localizedDescription)", isUser: false)
-                    } else {
-                        messages.append(ChatMessage(text: "Error: \(error.localizedDescription)", isUser: false))
-                    }
-                    streamingText = ""
+                isAwaitingResponse = false
+                showTypingIndicator = false
+                if let lastIndex = messages.indices.last, !messages[lastIndex].isUser {
+                    messages[lastIndex] = ChatMessage(text: "Error: \(error.localizedDescription)", isUser: false)
+                } else {
+                    messages.append(ChatMessage(text: "Error: \(error.localizedDescription)", isUser: false))
                 }
+                streamingText = ""
             }
         }
     }
 
-    // MARK: - Draft confirmation UI
-    
-    private var draftReviewSheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if let d = pendingDraft {
-                        // Header info card
-                        VStack(alignment: .leading, spacing: 12) {
-                            headerRow(label: "From", value: d.fromEmail ?? "your account")
-                            Divider()
-                            headerRow(label: "To", value: d.to)
-                            if let cc = d.cc, !cc.isEmpty {
-                                Divider()
-                                headerRow(label: "Cc", value: cc)
-                            }
-                            Divider()
-                            headerRow(label: "Subject", value: d.subject)
-                        }
-                        .padding(16)
-                        .background(Color(.systemGray6).opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        
-                        // Body card
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Message Body")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
-                            
-                            Text(d.body)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(16)
-                                .background(Color(.systemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
-                        }
-                    } else {
-                        ContentUnavailableView("No Draft", systemImage: "envelope.badge", description: Text("No draft to review."))
-                    }
-                }
-                .padding(16)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("New Message")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        pendingDraft = nil
-                        showDraftSheet = false
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        sendPendingDraft()
-                    } label: {
-                        if isSendingDraft {
-                            ProgressView()
-                        } else {
-                            Text("Send")
-                                .bold()
-                        }
-                    }
-                    .disabled(pendingDraft == nil || isSendingDraft)
-                }
-            }
-        }
-    }
-    
-    private func headerRow(label: String, value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .leading)
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.medium)
-            Spacer()
-        }
-    }
-    
-    private func sendPendingDraft() {
-        guard let d = pendingDraft else { return }
+    @MainActor
+    private func sendDraft(_ d: PendingEmailDraft) async {
         isSendingDraft = true
-        Task {
-            do {
-                let token = await authManager.refreshGoogleToken()
-                _ = try await chatClient.sendGmailDraft(
-                    draftId: d.id,
-                    userId: authManager.user?.uid,
-                    googleAccessToken: token
-                )
-                await MainActor.run {
-                    isSendingDraft = false
-                    showDraftSheet = false
-                    pendingDraft = nil
-                    messages.append(ChatMessage(text: "Sent email to \(d.to) — “\(d.subject)”.", isUser: false))
-                }
-            } catch {
-                await MainActor.run {
-                    isSendingDraft = false
-                    messages.append(ChatMessage(text: "Failed to send email: \(error.localizedDescription)", isUser: false))
-                }
-            }
+        do {
+            let token = await authManager.refreshGoogleToken()
+            _ = try await chatClient.sendGmailDraft(
+                draftId: d.id,
+                userId: authManager.user?.uid,
+                googleAccessToken: token
+            )
+            isSendingDraft = false
+            showDraftSheet = false
+            pendingDraft = nil
+            messages.append(ChatMessage(text: "Sent email to \(d.to) — “\(d.subject)”.", isUser: false))
+        } catch {
+            isSendingDraft = false
+            messages.append(ChatMessage(text: "Failed to send email: \(error.localizedDescription)", isUser: false))
         }
     }
     
@@ -1566,6 +1582,126 @@ struct ContentView: View {
             subject: subject,
             body: body
         )
+    }
+    
+    private func showToolSuccessToast(name: String, result: String) {
+        guard let data = result.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              (json["status"] as? String) == "success" else {
+            return
+        }
+        
+        var toast: ToolSuccessToast?
+        
+        switch name {
+        case "create_google_calendar_event":
+            if let event = json["event"] as? [String: Any] {
+                let summary = event["summary"] as? String ?? "Event"
+                let location = event["location"] as? String
+                
+                // Parse start time for display
+                var timeDisplay = ""
+                if let start = event["start"] as? [String: Any] {
+                    if let dateTime = start["dateTime"] as? String {
+                        let parts = dateTime.components(separatedBy: "T")
+                        if parts.count > 1 {
+                            let timePart = parts[1].prefix(5) // "17:00"
+                            timeDisplay = String(timePart)
+                        }
+                    }
+                }
+                
+                var subtitle = summary
+                if !timeDisplay.isEmpty {
+                    subtitle += " at \(timeDisplay)"
+                }
+                if let loc = location, !loc.isEmpty {
+                    subtitle += " • \(loc)"
+                }
+                
+                // No link for now - Google's event links are unreliable on iOS
+                toast = ToolSuccessToast(
+                    icon: "calendar.badge.checkmark",
+                    title: "Event Created",
+                    subtitle: subtitle,
+                    link: nil
+                )
+            }
+            
+        case "create_task":
+            let title = json["title"] as? String ?? "Task"
+            let due = json["due"] as? String
+            let dueDisplay = due?.prefix(10) ?? ""
+            toast = ToolSuccessToast(
+                icon: "checkmark.circle.fill",
+                title: "Task Added",
+                subtitle: title + (dueDisplay.isEmpty ? "" : " • Due \(dueDisplay)")
+            )
+            
+        case "complete_task":
+            let message = json["message"] as? String ?? "Task completed"
+            toast = ToolSuccessToast(
+                icon: "checkmark.circle.fill",
+                title: "Task Completed",
+                subtitle: message
+            )
+            
+        case "get_weather":
+            if let location = json["location"] as? String {
+                if let current = json["current"] as? [String: Any] {
+                    let temp = current["temperature_f"] as? Int ?? 0
+                    let condition = current["condition"] as? String ?? ""
+                    toast = ToolSuccessToast(
+                        icon: "cloud.sun.fill",
+                        title: "\(temp)°F - \(condition)",
+                        subtitle: location
+                    )
+                } else if let forecast = json["forecast"] as? [[String: Any]], let first = forecast.first {
+                    // This handles the "specific date" case
+                    let high = first["high_f"] as? Int ?? 0
+                    let low = first["low_f"] as? Int ?? 0
+                    let condition = first["condition"] as? String ?? ""
+                    let date = first["date"] as? String ?? ""
+                    toast = ToolSuccessToast(
+                        icon: "calendar.day.timeline.left",
+                        title: "\(high)°F / \(low)°F",
+                        subtitle: "\(condition) in \(location) on \(date)"
+                    )
+                }
+            }
+            
+        case "send_gmail_draft":
+            toast = ToolSuccessToast(
+                icon: "paperplane.fill",
+                title: "Email Sent",
+                subtitle: "Your email has been sent successfully"
+            )
+            
+        case "mark_gmail_emails_read":
+            let count = (json["updated"] as? [String])?.count ?? 0
+            toast = ToolSuccessToast(
+                icon: "envelope.open.fill",
+                title: "Marked as Read",
+                subtitle: "\(count) email(s) marked as read"
+            )
+            
+        default:
+            break
+        }
+        
+        if let toast = toast {
+            withAnimation {
+                toolSuccessToast = toast
+            }
+            // Auto-dismiss after 4 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    if self.toolSuccessToast?.id == toast.id {
+                        self.toolSuccessToast = nil
+                    }
+                }
+            }
+        }
     }
 
     /// Appends streaming text chunks while fixing common missing-space boundaries like "hours.There".
@@ -1615,6 +1751,8 @@ struct ContentView: View {
         // Remove tools for any disabled service (master kill-switch behavior)
         let calendarTools = availableTools.filter { $0.tags.contains("calendar") }.map { $0.name }
         let gmailTools = availableTools.filter { $0.tags.contains("gmail") }.map { $0.name }
+        let tasksTools = availableTools.filter { $0.tags.contains("tasks") }.map { $0.name }
+        let weatherTools = availableTools.filter { $0.tags.contains("weather") }.map { $0.name }
         
         if !calendarToolsEnabled {
             for name in calendarTools { enabledToolNames.remove(name) }
@@ -1635,29 +1773,38 @@ struct ContentView: View {
             }
         }
         
+        if !tasksToolsEnabled {
+            for name in tasksTools { enabledToolNames.remove(name) }
+        } else if tasksToolsEnabled && !tasksTools.isEmpty {
+            let selectedTasksTools = enabledToolNames.intersection(Set(tasksTools))
+            if selectedTasksTools.isEmpty {
+                for name in tasksTools { enabledToolNames.insert(name) }
+            }
+        }
+        
+        if !weatherToolsEnabled {
+            for name in weatherTools { enabledToolNames.remove(name) }
+        } else if weatherToolsEnabled && !weatherTools.isEmpty {
+            let selectedWeatherTools = enabledToolNames.intersection(Set(weatherTools))
+            if selectedWeatherTools.isEmpty {
+                for name in weatherTools { enabledToolNames.insert(name) }
+            }
+        }
+        
         persistEnabledToolNames()
     }
     
+    @MainActor
     private func refreshToolsList() async {
         do {
             let tools = try await chatClient.fetchTools()
-            await MainActor.run {
-                availableTools = tools
-            }
+            availableTools = tools
         } catch {
             print("[Tools] Failed to fetch tools: \(error)")
         }
     }
     
     // MARK: - Recording
-    
-    private func toggleRecording() {
-        if isRecording {
-            stopContinuousRecording()
-        } else {
-            startRecording()
-        }
-    }
     
     private func startRecording() {
         stopAudio()

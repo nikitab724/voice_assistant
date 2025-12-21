@@ -71,7 +71,7 @@ class AuthManager: ObservableObject {
         }
         
         do {
-            // Request calendar + gmail scope along with standard scopes (incremental auth)
+            // Request calendar + gmail + tasks scope along with standard scopes (incremental auth)
             let result = try await GIDSignIn.sharedInstance.signIn(
                 withPresenting: rootViewController,
                 hint: nil,
@@ -82,6 +82,8 @@ class AuthManager: ObservableObject {
                     // Needed for drafting and sending emails
                     "https://www.googleapis.com/auth/gmail.compose",
                     "https://www.googleapis.com/auth/gmail.send",
+                    // Google Tasks - for reminders and todos
+                    "https://www.googleapis.com/auth/tasks",
                 ]
             )
             

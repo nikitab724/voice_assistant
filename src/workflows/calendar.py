@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import difflib
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
@@ -199,6 +200,7 @@ async def list_google_calendar_events_tool(
     calendar_id: str | None = None,
     time_min_iso: str | None = None,
     time_max_iso: str | None = None,
+    query: str | None = None,
     max_results: int = 10,
     include_cancelled: bool = False,
     context: Context | None = None,
@@ -217,29 +219,55 @@ async def list_google_calendar_events_tool(
 
     calendar_id = calendar_id or calendar_settings.calendar_id
 
-    window_start = _coerce_datetime(time_min_iso) if time_min_iso else datetime.now(timezone.utc)
+    # If searching with a query, we broaden the default window to catch
+    # events that might be slightly outside the immediate "now to +7 days" range.
+    if query and not time_min_iso:
+        window_start = datetime.now(timezone.utc) - timedelta(days=7)
+    else:
+        window_start = _coerce_datetime(time_min_iso) if time_min_iso else datetime.now(timezone.utc)
+
     if time_max_iso:
         window_end = _coerce_datetime(time_max_iso)
+    elif query:
+        window_end = window_start + timedelta(days=30)
     else:
         window_end = window_start + timedelta(days=7)
 
     if window_end <= window_start:
         raise ValueError("time_max_iso must be after time_min_iso")
 
+    if context:
+        msg = f"Listing events in calendar '{calendar_id}'"
+        if query:
+            msg += f" matching '{query}'"
+        await context.info(f"{msg}...")
+
     service = get_calendar_service()
-    events_result = (
-        service.events()
-        .list(
-            calendarId=calendar_id,
-            timeMin=window_start.isoformat(),
-            timeMax=window_end.isoformat(),
-            maxResults=max_results,
-            singleEvents=True,
-            orderBy="startTime",
-            showDeleted=include_cancelled,
-        )
-        .execute()
-    )
+    
+    # Increase maxResults when querying to ensure fuzzy matcher has enough data
+    api_max_results = max_results
+    if query:
+        api_max_results = max(50, max_results)
+    
+    # Google API list parameters
+    params = {
+        "calendarId": calendar_id,
+        "timeMin": window_start.isoformat(),
+        "timeMax": window_end.isoformat(),
+        "maxResults": api_max_results,
+        "singleEvents": True,
+        "showDeleted": include_cancelled,
+    }
+    
+    # If a query is provided, we use Google's 'q' parameter but ALSO
+    # perform local fuzzy matching for higher reliability with plurals/typos.
+    if query:
+        params["q"] = query
+    else:
+        # orderBy is only supported when q is NOT specified
+        params["orderBy"] = "startTime"
+
+    events_result = service.events().list(**params).execute()
 
     items = events_result.get("items", [])
     events: List[CalendarEvent] = []
@@ -258,6 +286,30 @@ async def list_google_calendar_events_tool(
                 calendarId=calendar_id,
             )
         )
+
+    # Local fuzzy filtering if query is present
+    if query and events:
+        qnorm = query.strip().lower()
+        
+        def score_event(e: CalendarEvent) -> float:
+            summary = (e.summary or "").strip().lower()
+            desc = (e.description or "").strip().lower()
+            hay = f"{summary} {desc}".strip()
+            if not hay:
+                return 0.0
+            
+            # Substring match (strong signal)
+            if qnorm in summary or qnorm in desc:
+                return 1.0
+                
+            # Fuzzy ratio
+            return difflib.SequenceMatcher(a=qnorm, b=hay).ratio()
+
+        # Sort by fuzzy score
+        events.sort(key=score_event, reverse=True)
+        
+        # Only keep reasonably good matches
+        events = [e for e in events if score_event(e) > 0.3]
 
     if context:
         await context.info(f"Fetched {len(events)} events from calendar '{calendar_id}'.")
@@ -312,12 +364,20 @@ async def delete_google_calendar_event_tool(
 
     service = get_calendar_service()
 
+    # Try to fetch event summary first so we can report what we deleted
+    event_summary = "unknown event"
+    try:
+        event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+        event_summary = event.get("summary", "untitled event")
+    except Exception:
+        pass
+
     try:
         service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
         status_value = "success"
-        message = None
+        message = f"Deleted event: {event_summary}"
         if context:
-            await context.info("Event deleted successfully.")
+            await context.info(f"Event '{event_summary}' deleted successfully.")
     except Exception as exc:  # pragma: no cover - Google API errors
         status_value = "error"
         message = f"Failed to delete event: {exc}"

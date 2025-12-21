@@ -17,6 +17,13 @@ from workflows import (
     create_gmail_draft_tool,
     send_gmail_draft_tool,
     list_gmail_contacts_tool,
+    list_task_lists_tool,
+    list_tasks_tool,
+    create_task_tool,
+    complete_task_tool,
+    update_task_tool,
+    delete_task_tool,
+    get_weather_tool,
 )
 
 
@@ -89,7 +96,10 @@ async def create_google_calendar_event(
     )
 
 
-@server.tool(description="Retrieve upcoming events from Google Calendar.", tags=["calendar"])
+@server.tool(
+    description="Retrieve events from Google Calendar. Can be filtered by time range or a search query (e.g. 'breakfast'). If searching by query, prefer a wider time range (e.g. +/- 7 days) to ensure you don't miss the event due to date ambiguities. Use a query to find specific event IDs before updating or deleting them.",
+    tags=["calendar"],
+)
 async def list_google_calendar_events(
     calendar_id: Annotated[
         str | None,
@@ -102,6 +112,10 @@ async def list_google_calendar_events(
     time_max_iso: Annotated[
         str | None,
         "ISO timestamp for the latest event start to return. Defaults to 7 days after time_min.",
+    ] = None,
+    query: Annotated[
+        str | None,
+        "Optional text search query to filter events by summary or description.",
     ] = None,
     max_results: Annotated[
         int,
@@ -117,6 +131,7 @@ async def list_google_calendar_events(
         calendar_id=calendar_id,
         time_min_iso=time_min_iso,
         time_max_iso=time_max_iso,
+        query=query,
         max_results=max_results,
         include_cancelled=include_cancelled,
         context=context,
@@ -124,7 +139,7 @@ async def list_google_calendar_events(
 
 
 @server.tool(
-    description="Delete an event from Google Calendar by ID. For recurring events, can delete single instance or entire series.",
+    description="Delete an event from Google Calendar. NEVER guess or use placeholder IDs. If you don't already have the correct event ID in your context, use 'list_google_calendar_events' (optionally with a query) to find it first.",
     tags=["calendar"],
 )
 async def delete_google_calendar_event(
@@ -148,7 +163,7 @@ async def delete_google_calendar_event(
 
 
 @server.tool(
-    description="Update an existing Google Calendar event. Use this to reschedule, rename, or change event details.",
+    description="Update an existing Google Calendar event. NEVER guess or use placeholder IDs. If you don't already have the correct event ID in your context, use 'list_google_calendar_events' (optionally with a query) to find it first.",
     tags=["calendar"],
 )
 async def update_google_calendar_event(
@@ -321,6 +336,152 @@ async def list_gmail_contacts(
         max_messages=max_messages,
         max_contacts=max_contacts,
         exclude_no_reply=exclude_no_reply,
+        context=context,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Google Tasks tools
+# ---------------------------------------------------------------------------
+
+
+@server.tool(
+    description="List all task lists (e.g., 'My Tasks', 'Work', 'Shopping').",
+    tags=["tasks"],
+)
+async def list_task_lists(
+    context: Context | None = None,
+):
+    return await list_task_lists_tool(context=context)
+
+
+@server.tool(
+    description="List tasks from a task list. Shows pending tasks by default. Use this to check your todo list or see what needs to be done.",
+    tags=["tasks"],
+)
+async def list_tasks(
+    task_list_id: Annotated[str | None, "Task list ID. Defaults to primary task list if not specified."] = None,
+    show_completed: Annotated[bool, "Whether to include completed tasks. Defaults to false."] = False,
+    max_results: Annotated[int, "Maximum number of tasks to return. Defaults to 50."] = 50,
+    context: Context | None = None,
+):
+    return await list_tasks_tool(
+        task_list_id=task_list_id,
+        show_completed=show_completed,
+        max_results=max_results,
+        context=context,
+    )
+
+
+@server.tool(
+    description="Create a new task/todo item. Use for 'remind me to...', 'add to my todo list'. Only supports DATE (not time) - for time-specific reminders, use calendar instead.",
+    tags=["tasks"],
+)
+async def create_task(
+    title: Annotated[str, "The task title/description (e.g., 'Buy groceries', 'Call mom')."],
+    notes: Annotated[str | None, "Optional additional notes or details for the task."] = None,
+    due: Annotated[str | None, "Optional due DATE in YYYY-MM-DD format. Time is NOT supported - use calendar for timed reminders."] = None,
+    task_list_id: Annotated[str | None, "Task list ID. Defaults to primary task list."] = None,
+    context: Context | None = None,
+):
+    return await create_task_tool(
+        title=title,
+        notes=notes,
+        due=due,
+        task_list_id=task_list_id,
+        context=context,
+    )
+
+
+@server.tool(
+    description="Mark a task as completed. NEVER guess or use placeholder IDs. If you don't already have the correct task ID in your context, use 'list_tasks' to find it first.",
+    tags=["tasks"],
+)
+async def complete_task(
+    task_id: Annotated[str, "The task ID to mark as completed."],
+    task_list_id: Annotated[str | None, "Task list ID. Defaults to primary task list."] = None,
+    context: Context | None = None,
+):
+    return await complete_task_tool(
+        task_id=task_id,
+        task_list_id=task_list_id,
+        context=context,
+    )
+
+
+@server.tool(
+    description="Update an existing task's title, notes, or due date. NEVER guess or use placeholder IDs. If you don't already have the correct task ID in your context, use 'list_tasks' to find it first.",
+    tags=["tasks"],
+)
+async def update_task(
+    task_id: Annotated[str, "The task ID to update."],
+    title: Annotated[str | None, "New title for the task."] = None,
+    notes: Annotated[str | None, "New notes for the task."] = None,
+    due: Annotated[str | None, "New due DATE in YYYY-MM-DD format (time not supported)."] = None,
+    task_list_id: Annotated[str | None, "Task list ID. Defaults to primary task list."] = None,
+    context: Context | None = None,
+):
+    return await update_task_tool(
+        task_id=task_id,
+        title=title,
+        notes=notes,
+        due=due,
+        task_list_id=task_list_id,
+        context=context,
+    )
+
+
+@server.tool(
+    description="Delete a task. NEVER guess or use placeholder IDs. If you don't already have the correct task ID in your context, use 'list_tasks' to find it first.",
+    tags=["tasks"],
+)
+async def delete_task(
+    task_id: Annotated[str, "The task ID to delete."],
+    task_list_id: Annotated[str | None, "Task list ID. Defaults to primary task list."] = None,
+    context: Context | None = None,
+):
+    return await delete_task_tool(
+        task_id=task_id,
+        task_list_id=task_list_id,
+        context=context,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Weather tools
+# ---------------------------------------------------------------------------
+
+
+@server.tool(
+    description=(
+        "Get weather for a location. Weather lookup ALWAYS uses latitude/longitude coordinates. "
+        "If a city/place name is provided, the server will geocode it into coordinates first. "
+        "If no location is provided, the server uses the user's iPhone-provided coordinates (device location). "
+        "Can get current weather, a 5-day forecast, or weather for a specific date "
+        "(past or future up to 16 days). "
+        "If the user mentions a specific day/time (e.g. 'tomorrow', 'next Friday', 'on Dec 25'), pass datetime_iso "
+        "(preferred) or date (YYYY-MM-DD). "
+        "IMPORTANT: If you already have latitude/longitude from a previous weather result, reuse those coordinates "
+        "for follow-up questions (e.g. 'next two days') instead of re-geocoding a location string."
+    ),
+    tags=["weather"],
+)
+async def get_weather(
+    location: Annotated[str | None, "City name or place (e.g., 'Chicago', 'New York, NY', 'Paris, France')."] = None,
+    latitude: Annotated[float | None, "Latitude coordinate (use with longitude instead of location name)."] = None,
+    longitude: Annotated[float | None, "Longitude coordinate (use with latitude instead of location name)."] = None,
+    datetime_iso: Annotated[str | None, "Optional ISO-8601 datetime (e.g. 2025-12-25T15:30:00-06:00). Date portion is used for daily weather."] = None,
+    date: Annotated[str | None, "Optional date in YYYY-MM-DD format to get weather for a specific day."] = None,
+    include_forecast: Annotated[bool, "Include 5-day forecast (only if date is not provided). Defaults to true."] = True,
+    context: Context | None = None,
+):
+    return await get_weather_tool(
+        location=location,
+        latitude=latitude,
+        longitude=longitude,
+        datetime_iso=datetime_iso,
+        date=date,
+        include_forecast=include_forecast,
         context=context,
     )
 

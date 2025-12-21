@@ -143,10 +143,11 @@ def _tool_availability_message(
     for t in all_tools:
         all_tags |= _tool_tags(t)
 
-    if allowed_tags is None:
-        enabled_tags = set(all_tags)
-    else:
-        enabled_tags = {str(t) for t in allowed_tags}
+    # Compute enabled tags from the tools that are actually available
+    # (not just what was requested - a tool might have multiple tags)
+    enabled_tags: Set[str] = set()
+    for t in enabled_tools:
+        enabled_tags |= _tool_tags(t)
 
     disabled_tags = sorted(all_tags - enabled_tags)
     enabled_tags_sorted = sorted(enabled_tags)

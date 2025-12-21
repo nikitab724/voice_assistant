@@ -22,7 +22,7 @@ if SRC_DIR not in sys.path:
 from agent import ChatAgent  # noqa: E402
 from app_config import get_openai_settings  # noqa: E402
 from calendar_client import set_google_access_token  # noqa: E402
-from user_context import set_user_timezone  # noqa: E402
+from user_context import set_user_timezone, set_user_location  # noqa: E402
 from chat.mcp_bridge import run_chat_with_mcp_tools_streaming  # noqa: E402
 from chat.session_store import get_session, append_turn, ChatTurn  # noqa: E402
 from fastmcp import Client as FastMCPClient  # noqa: E402
@@ -486,6 +486,8 @@ def chat_stream_endpoint():
     # If present, allowed_tool_tags can be [] meaning "no tools allowed"
     allowed_tool_tags = payload.get("allowed_tool_tags", None)
     timezone_name = payload.get("timezone_name") or None
+    user_latitude = payload.get("user_latitude")
+    user_longitude = payload.get("user_longitude")
 
     def generate():
         # Send an immediate SSE comment to flush headers/bytes quickly (prevents client timeouts)
@@ -499,6 +501,8 @@ def chat_stream_endpoint():
 
         # Set per-request timezone for downstream tools (Gmail/Calendar defaults & formatting)
         set_user_timezone(timezone_name)
+        # Set user location for weather and location-aware tools
+        set_user_location(user_latitude, user_longitude)
 
         # Get session and build messages
         session = get_session(session_id, user_id=user_id)
